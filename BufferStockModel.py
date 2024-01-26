@@ -42,7 +42,6 @@ class BufferStockModelClass(EconModelClass):
         par.Npsi = 5  # number of points in permanent income shock expectaion
 
         # EGM
-        par.num_A_pd = 30 # number of points in pre-computation grid
         par.max_A_pd = 5.0
 
         # iEGM
@@ -68,7 +67,7 @@ class BufferStockModelClass(EconModelClass):
         
         # a. asset grid
         par.m_grid = nonlinspace(0.00001,par.m_max,par.Nm,1.1) # always have a bit of resources
-        par.a_grid = nonlinspace(0.00001,par.max_A_pd,par.num_A_pd,1.1) # always have a bit of resources
+        par.a_grid = nonlinspace(0.00001,par.max_A_pd,par.Nm,1.1) # always have a bit of resources
 
         # b. income shock grids
         par.xi_grid,par.xi_weight = log_normal_gauss_hermite(par.sigma_trans,par.Nxi)
@@ -77,6 +76,7 @@ class BufferStockModelClass(EconModelClass):
         # b. solution arrays
         shape = (par.T,par.Nm)
         sol.c = np.nan + np.zeros(shape)
+        sol.m = np.nan + np.zeros(shape)
         sol.V = np.nan + np.zeros(shape)
 
         # c. simulation arrays
@@ -115,49 +115,115 @@ class BufferStockModelClass(EconModelClass):
         par = self.par
         sol = self.sol
         
-        # b. solve last period
+        # b. solve last period (consume everything)
         t = par.T-1
         sol.c[t,:] = par.m_grid
+        sol.m[t,:] = par.m_grid
         sol.V[t,:] = self.util(sol.c[t,:])
 
-        # c. loop backwards [note, the last element, N, in range(N) is not included in the loop due to index starting at 0]
-        for t in reversed(range(par.T-1)):
-
-            if par.method == 'vfi':
-                self.solve_vfi(t)
-            
-            elif par.method == 'egm':
-                self.solve_egm(t)
-            
-            elif par.method == 'iegm':
-                self.precompute_C()
-                self.solve_iegm(t)
-
-            else:
-                raise Exception('Unknown method')
+        # c. solve all previous periods
+        if par.method == 'vfi':
+            self.solve_vfi()
         
-    def solve_vfi(self,t):
+        elif par.method == 'egm':
+            self.solve_egm()
+        
+        elif par.method == 'iegm':
+            self.precompute_C()
+            self.solve_iegm()
+
+        else:
+            raise Exception('Unknown method')
+        
+    def solve_iegm(self):
         # a. unpack
         par = self.par
         sol = self.sol
 
-        # i. loop over state varible: resources in beginning of period
-        for im,resources in enumerate(par.m_grid):
+        for t in reversed(range(par.T-1)):
 
-            # ii. find optimal consumption at this level of resources in this period t.
-            obj = lambda c: - self.value_of_choice(c[0],resources,t)  
+            # b. loop over end-of-period wealth
+            for ia,assets in enumerate(par.a_grid):
+                
+                # i. loop over income shocks to get expected marginal utility
+                EmargV_next = 0.0
+                for i_xi,xi in enumerate(par.xi_grid):
+                    for i_psi,psi in enumerate(par.psi_grid):
+                        fac = par.G*psi # normalization factor
 
-            # bounds on consumption
-            lb = 0.000001 # avoid dividing with zero
-            ub = resources
+                        # interpolate next period value function for this combination of transitory and permanent income shocks
+                        m_next = (1.0+par.r)*assets/fac + xi
+                        C_next_interp = interp_1d(sol.m[t+1],sol.c[t+1],m_next)
+                        margV_next_interp = self.marg_util(C_next_interp)
 
-            # call optimizer
-            c_init = np.array(0.5*ub) # initial guess on optimal consumption
-            res = minimize(obj,c_init,bounds=((lb,ub),),method='SLSQP')
-            
-            # store results
-            sol.c[t,im] = res.x[0]
-            sol.V[t,im] = -res.fun
+                        # weight the interpolated value with the likelihood
+                        EmargV_next += margV_next_interp*par.xi_weight[i_xi]*par.psi_weight[i_psi]
+                
+                # ii. invert marginal utility to get consumption (interpolate pre-computed consumption)
+                EmargV_next = par.beta*(1.0+par.r)*EmargV_next
+                sol.c[t,ia] = interp_1d(par.grid_marg_U_flip,par.grid_C_flip, EmargV_next)  
+
+                # iii. endogenous level of resources (value function not stored since not needed here)
+                sol.m[t,ia] = assets + sol.c[t,ia]
+
+
+    def solve_egm(self):
+        # a. unpack
+        par = self.par
+        sol = self.sol
+
+        for t in reversed(range(par.T-1)):
+
+            # b. loop over end-of-period wealth
+            for ia,assets in enumerate(par.a_grid):
+                
+                # i. loop over income shocks to get expected marginal utility
+                EmargV_next = 0.0
+                for i_xi,xi in enumerate(par.xi_grid):
+                    for i_psi,psi in enumerate(par.psi_grid):
+                        fac = par.G*psi # normalization factor
+
+                        # interpolate next period value function for this combination of transitory and permanent income shocks
+                        m_next = (1.0+par.r)*assets/fac + xi
+                        C_next_interp = interp_1d(sol.m[t+1],sol.c[t+1],m_next)
+                        margV_next_interp = self.marg_util(C_next_interp)
+
+                        # weight the interpolated value with the likelihood
+                        EmargV_next += margV_next_interp*par.xi_weight[i_xi]*par.psi_weight[i_psi]
+                
+                # ii. invert marginal utility to get consumption
+                EmargV_next = par.beta*(1.0+par.r)*EmargV_next
+                sol.c[t,ia] = self.inv_marg_util(EmargV_next)  # only line that differs from EGM
+
+                # iii. endogenous level of resources (value function not stored since not needed here)
+                sol.m[t,ia] = assets + sol.c[t,ia]
+
+
+    def solve_vfi(self):
+        # a. unpack
+        par = self.par
+        sol = self.sol
+
+        for t in reversed(range(par.T-1)):
+
+            # i. loop over state varible: resources in beginning of period
+            for im,resources in enumerate(par.m_grid):
+
+                # ii. find optimal consumption at this level of resources in this period t.
+                obj = lambda c: - self.value_of_choice(c[0],resources,t)  
+
+                # bounds on consumption
+                lb = 0.000001 # avoid dividing with zero
+                ub = resources
+
+                # call optimizer
+                c_init = np.array(0.5*ub) # initial guess on optimal consumption
+                res = minimize(obj,c_init,bounds=((lb,ub),),method='SLSQP')
+                
+                # store results
+                sol.c[t,im] = res.x[0]
+                sol.m[t,im] = resources
+                sol.V[t,im] = -res.fun
 
 
     def value_of_choice(self,cons,resources,t):
