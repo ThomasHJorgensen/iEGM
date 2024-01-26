@@ -35,8 +35,8 @@ class BufferStockModelClass(EconModelClass):
         par.r = 0.02 # interest rate
 
         # grid
-        par.m_max = 5.0 # maximum point in resource grid
-        par.Nm = 50 # number of grid points in resource grid    
+        par.max_m = 5.0 # maximum point in resource grid
+        par.num_m = 50 # number of grid points in resource grid    
 
         par.Nxi = 5 # number of points in transitory income shock expectaion
         par.Npsi = 5  # number of points in permanent income shock expectaion
@@ -66,15 +66,15 @@ class BufferStockModelClass(EconModelClass):
         sim = self.sim
         
         # a. asset grid
-        par.m_grid = nonlinspace(0.00001,par.m_max,par.Nm,1.1) # always have a bit of resources
-        par.a_grid = nonlinspace(0.00001,par.max_A_pd,par.Nm,1.1) # always have a bit of resources
+        par.m_grid = nonlinspace(0.00001,par.max_m,par.num_m,1.1) # always have a bit of resources
+        par.a_grid = nonlinspace(0.00001,par.max_A_pd,par.num_m,1.1) # always have a bit of resources
 
         # b. income shock grids
         par.xi_grid,par.xi_weight = log_normal_gauss_hermite(par.sigma_trans,par.Nxi)
         par.psi_grid,par.psi_weight = log_normal_gauss_hermite(par.sigma_perm,par.Npsi)
 
         # b. solution arrays
-        shape = (par.T,par.Nm)
+        shape = (par.T,par.num_m)
         sol.c = np.nan + np.zeros(shape)
         sol.m = np.nan + np.zeros(shape)
         sol.V = np.nan + np.zeros(shape)
@@ -130,43 +130,11 @@ class BufferStockModelClass(EconModelClass):
         
         elif par.method == 'iegm':
             self.precompute_C()
-            self.solve_iegm()
+            self.solve_egm()
 
         else:
             raise Exception('Unknown method')
         
-    def solve_iegm(self):
-        # a. unpack
-        par = self.par
-        sol = self.sol
-
-        for t in reversed(range(par.T-1)):
-
-            # b. loop over end-of-period wealth
-            for ia,assets in enumerate(par.a_grid):
-                
-                # i. loop over income shocks to get expected marginal utility
-                EmargV_next = 0.0
-                for i_xi,xi in enumerate(par.xi_grid):
-                    for i_psi,psi in enumerate(par.psi_grid):
-                        fac = par.G*psi # normalization factor
-
-                        # interpolate next period value function for this combination of transitory and permanent income shocks
-                        m_next = (1.0+par.r)*assets/fac + xi
-                        C_next_interp = interp_1d(sol.m[t+1],sol.c[t+1],m_next)
-                        margV_next_interp = self.marg_util(C_next_interp)
-
-                        # weight the interpolated value with the likelihood
-                        EmargV_next += margV_next_interp*par.xi_weight[i_xi]*par.psi_weight[i_psi]
-                
-                # ii. invert marginal utility to get consumption (interpolate pre-computed consumption)
-                EmargV_next = par.beta*(1.0+par.r)*EmargV_next
-                sol.c[t,ia] = interp_1d(par.grid_marg_U_flip,par.grid_C_flip, EmargV_next)  
-
-                # iii. endogenous level of resources (value function not stored since not needed here)
-                sol.m[t,ia] = assets + sol.c[t,ia]
-
-
     def solve_egm(self):
         # a. unpack
         par = self.par
@@ -175,7 +143,7 @@ class BufferStockModelClass(EconModelClass):
         for t in reversed(range(par.T-1)):
 
             # b. loop over end-of-period wealth
-            for ia,assets in enumerate(par.a_grid):
+            for ia,assets in enumerate(par.a_grid): # same dimension as m_grid
                 
                 # i. loop over income shocks to get expected marginal utility
                 EmargV_next = 0.0
@@ -191,9 +159,13 @@ class BufferStockModelClass(EconModelClass):
                         # weight the interpolated value with the likelihood
                         EmargV_next += margV_next_interp*par.xi_weight[i_xi]*par.psi_weight[i_psi]
                 
-                # ii. invert marginal utility to get consumption
+                # ii. invert marginal utility to get consumption (interpolate pre-computed consumption if iEGM)
                 EmargV_next = par.beta*(1.0+par.r)*EmargV_next
-                sol.c[t,ia] = self.inv_marg_util(EmargV_next)  # only line that differs from EGM
+                if par.method=='egm':
+                    sol.c[t,ia] = self.inv_marg_util(EmargV_next)
+                    
+                elif par.method=='iegm':
+                    sol.c[t,ia] = interp_1d(par.grid_marg_U_flip,par.grid_C_flip, EmargV_next)  
 
                 # iii. endogenous level of resources (value function not stored since not needed here)
                 sol.m[t,ia] = assets + sol.c[t,ia]
@@ -312,7 +284,7 @@ class BufferStockModelClass(EconModelClass):
                 if t<par.T: # check that simulation does not go further than solution                 
 
                     # iii. interpolate optimal consumption (normalized)
-                    sim.c[i,t] = interp_1d(par.m_grid,sol.c[t],sim.m[i,t])
+                    sim.c[i,t] = interp_1d(sol.m[t],sol.c[t],sim.m[i,t])
 
                     # iv. Update next-period states
                     if t<par.simT-1:
