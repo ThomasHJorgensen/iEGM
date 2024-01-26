@@ -23,16 +23,16 @@ class BufferStockModelClass(EconModelClass):
         par.T = 20 # time periods
         
         # preferences
-        par.beta = 0.98 # discount factor
+        par.beta = 0.99 # discount factor
         par.rho = 1.5 # CRRA coefficient
 
         # income
-        par.G = 1.03 # income growth level
+        par.G = 1.02 # income growth level
         par.sigma_trans = 0.1 # transitory income shock standard deviation
         par.sigma_perm = 0.1 # permanent income shock standard deviation
 
         # saving
-        par.r = 0.02 # interest rate
+        par.r = 0.03 # interest rate
 
         # grid
         par.max_m = 5.0 # maximum point in resource grid
@@ -50,8 +50,7 @@ class BufferStockModelClass(EconModelClass):
 
         # simulation
         par.seed = 9210
-        par.simT = par.T # number of periods
-        par.simN = 1_000 # number of individuals
+        par.simN = 10_000 # number of consumers simulated
 
         # solution method
         par.method = 'vfi' # vfi, egm, or iegm.
@@ -80,7 +79,7 @@ class BufferStockModelClass(EconModelClass):
         sol.V = np.nan + np.zeros(shape)
 
         # c. simulation arrays
-        shape = (par.simN,par.simT)
+        shape = (par.simN,par.T)
         sim.c = np.nan + np.zeros(shape)
         sim.m = np.nan + np.zeros(shape)
         sim.a = np.nan + np.zeros(shape)
@@ -89,6 +88,9 @@ class BufferStockModelClass(EconModelClass):
         sim.A = np.nan + np.zeros(shape)
         sim.P = np.nan + np.zeros(shape)
         sim.Y = np.nan + np.zeros(shape)
+
+        sim.euler = np.nan + np.zeros(shape)
+        sim.mean_log10_euler = np.nan
         
         # d. initialization
         sim.a_init = np.zeros(par.simN)
@@ -142,6 +144,10 @@ class BufferStockModelClass(EconModelClass):
 
         for t in reversed(range(par.T-1)):
 
+            # add credit constraint
+            m_interp_next =  np.concatenate((np.array([0.0]),sol.m[t+1]))
+            c_interp_next =  np.concatenate((np.array([0.0]),sol.c[t+1]))
+
             # b. loop over end-of-period wealth
             for ia,assets in enumerate(par.a_grid): # same dimension as m_grid
                 
@@ -153,8 +159,8 @@ class BufferStockModelClass(EconModelClass):
 
                         # interpolate next period value function for this combination of transitory and permanent income shocks
                         m_next = (1.0+par.r)*assets/fac + xi
-                        C_next_interp = interp_1d(sol.m[t+1],sol.c[t+1],m_next)
-                        margV_next_interp = self.marg_util(C_next_interp)
+                        C_next_interp = interp_1d(m_interp_next,c_interp_next,m_next)
+                        margV_next_interp = self.marg_util(fac*C_next_interp)
 
                         # weight the interpolated value with the likelihood
                         EmargV_next += margV_next_interp*par.xi_weight[i_xi]*par.psi_weight[i_psi]
@@ -280,14 +286,18 @@ class BufferStockModelClass(EconModelClass):
             sim.M[i,t] = (1.0+par.r)*sim.A[i,t] + sim.Y[i,t]
             sim.m[i,t] = sim.M[i,t]/sim.P[i,t]
 
-            for t in range(par.simT):
+            for t in range(par.T):
+                # add credit constraint
+                m_interp =  np.concatenate((np.array([0.0]),sol.m[t]))
+                c_interp =  np.concatenate((np.array([0.0]),sol.c[t]))
+                
                 if t<par.T: # check that simulation does not go further than solution                 
 
                     # iii. interpolate optimal consumption (normalized)
-                    sim.c[i,t] = interp_1d(sol.m[t],sol.c[t],sim.m[i,t])
+                    sim.c[i,t] = interp_1d(m_interp,c_interp,sim.m[i,t])
 
                     # iv. Update next-period states
-                    if t<par.simT-1:
+                    if t<par.T-1:
                         sim.P[i,t+1] = par.G*sim.P[i,t]*sim.psi[i,t+1]
                         sim.Y[i,t+1] = sim.P[i,t+1]*sim.xi[i,t+1]
 
@@ -296,5 +306,32 @@ class BufferStockModelClass(EconModelClass):
 
                         sim.M[i,t+1] = (1.0+par.r)*sim.A[i,t+1] + sim.Y[i,t+1]
                         sim.m[i,t+1] = sim.M[i,t+1]/sim.P[i,t+1]
+
+                        # Euler error
+                        if sim.a[i,t+1] >= 0.001: # not constrained
+                            m_interp_next =  np.concatenate((np.array([0.0]),sol.m[t+1]))
+                            c_interp_next =  np.concatenate((np.array([0.0]),sol.c[t+1]))
+
+                            EmargV_next = 0.0
+                            for i_xi,xi in enumerate(par.xi_grid):
+                                for i_psi,psi in enumerate(par.psi_grid):
+                                    fac = par.G*psi # normalization factor
+
+                                    # interpolate next period value function for this combination of transitory and permanent income shocks
+                                    m_next = (1.0+par.r)*sim.a[i,t+1]/fac + xi
+                                    c_next = interp_1d(m_interp_next,c_interp_next,m_next)
+                                    margV_next = self.marg_util(fac*c_next)
+
+                                    # weight the interpolated value with the likelihood
+                                    EmargV_next += margV_next*par.xi_weight[i_xi]*par.psi_weight[i_psi]
+                            
+                            EmargV_next = par.beta*(1.0+par.r)*EmargV_next
+                            sim.euler[i,t] = sim.c[i,t] - self.inv_marg_util(EmargV_next)
+                        else:
+                            sim.euler[i,t] = np.nan
+            
+        sim.mean_log10_euler = np.nanmean(np.log10( abs(sim.euler/sim.c) + 1.0e-16));
+            
+
 
 
