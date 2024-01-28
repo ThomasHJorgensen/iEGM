@@ -1,11 +1,13 @@
 import numpy as np
 from scipy.optimize import minimize
 
-from EconModel import EconModelClass, jit
+from EconModel import EconModelClass
 
 from consav.grids import nonlinspace
 from consav.linear_interp import interp_1d
 from consav.quadrature import log_normal_gauss_hermite
+
+from InterpolationFunctions import *
 
 class BufferStockModelClass(EconModelClass):
 
@@ -257,17 +259,27 @@ class BufferStockModelClass(EconModelClass):
 
         # a. unpack
         par = self.par
-        sol = self.sol
 
         # b. loop over consumption grid and store marginal utility
-        for i_c,c in enumerate(par.grid_C):
-            par.grid_marg_U[i_c] = self.marg_util(c)
+        par.grid_marg_U = self.marg_util(par.grid_C)
 
         # c. flip grids such that marginal utility is increasing (for interpolation)
         par.grid_marg_U_flip = np.flip(par.grid_marg_U)
         par.grid_C_flip = np.flip(par.grid_C)
+
+        # flip if wanted
         if par.interp_inverse:
             par.grid_C_flip = 1.0/par.grid_C_flip # inverse consumption is interpolated
+
+        # chebyshev interpolator: NOT WORKING. must be able to evaluate function (consumption) at new points in this setup. Consider constructing interpolator formargU and then use the inverse matrix.
+        if par.interp_method == 'chebyshev':
+            points = par.grid_marg_U_flip
+            num_nodes = par.num_C
+            par.cheby_degree = par.num_C-1
+
+            nodes = Chebyshev_nodes(points,num_nodes)
+            par.grid_C = nodes
+            par.cheby_coefs = Chebyshev_coefs(par.grid_C_flip,num_nodes,par.cheby_degree)
 
     ##############
     # Simulation #
