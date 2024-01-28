@@ -48,6 +48,9 @@ class BufferStockModelClass(EconModelClass):
         par.num_C = 30 # number of points in pre-computation grid
         par.max_C = 5.0 # maximum point in pre-computation grid
 
+        par.interp_method = 'linear' # linear, chebyshev
+        par.interp_inverse = False # True: interpolate inverse consumption
+
         # simulation
         par.seed = 9210
         par.simN = 10_000 # number of consumers simulated
@@ -172,6 +175,8 @@ class BufferStockModelClass(EconModelClass):
                     
                 elif par.method=='iegm':
                     sol.c[t,ia] = interp_1d(par.grid_marg_U_flip,par.grid_C_flip, EmargV_next)  
+                    if par.interp_inverse:
+                        sol.c[t,ia] = 1.0/sol.c[t,ia] # inverse consumption has be interpolated
 
                 # iii. endogenous level of resources (value function not stored since not needed here)
                 sol.m[t,ia] = assets + sol.c[t,ia]
@@ -259,8 +264,10 @@ class BufferStockModelClass(EconModelClass):
             par.grid_marg_U[i_c] = self.marg_util(c)
 
         # c. flip grids such that marginal utility is increasing (for interpolation)
-        par.grid_C_flip = np.flip(par.grid_C)
         par.grid_marg_U_flip = np.flip(par.grid_marg_U)
+        par.grid_C_flip = np.flip(par.grid_C)
+        if par.interp_inverse:
+            par.grid_C_flip = 1.0/par.grid_C_flip # inverse consumption is interpolated
 
     ##############
     # Simulation #
