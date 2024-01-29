@@ -211,7 +211,7 @@ class BufferStockModelClass(EconModelClass):
                 ub = resources
 
                 # call optimizer
-                c_init = np.array(0.5*ub) if t==(par.T-1) else np.array([sol.c[t+1,im]]) # initial guess on optimal consumption
+                c_init = sol.c[t+1,im] # initial guess on optimal consumption: last period's optimal consumption
                 res = minimize(obj,c_init,bounds=((lb,ub),),method='SLSQP')
                 
                 # store results
