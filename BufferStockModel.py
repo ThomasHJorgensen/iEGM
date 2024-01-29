@@ -51,7 +51,7 @@ class BufferStockModelClass(EconModelClass):
         par.max_C = 5.0 # maximum point in pre-computation grid
         par.unequal_C = 1.1
 
-        par.interp_method = 'linear' # linear, chebyshev
+        par.interp_method = 'linear' # linear, regression
         par.interp_inverse = False # True: interpolate inverse consumption
         par.interp_degree = 8
 
@@ -284,16 +284,6 @@ class BufferStockModelClass(EconModelClass):
         if par.interp_method == 'regression':
             par.interp_coefs = regression_coefs(par.grid_marg_U_flip,par.grid_C_flip,par.interp_degree)
 
-        # chebyshev interpolator: NOT WORKING. must be able to evaluate function (consumption) at new points in this setup. Consider constructing interpolator formargU and then use the inverse matrix.
-        # if par.interp_method == 'chebyshev':
-        #     points = par.grid_marg_U_flip
-        #     num_nodes = par.num_C
-        #     par.cheby_degree = par.num_C-1
-
-        #     nodes = Chebyshev_nodes(points,num_nodes)
-        #     par.grid_C = nodes
-        #     par.cheby_coefs = Chebyshev_coefs(par.grid_C_flip,num_nodes,par.cheby_degree)
-
     ##############
     # Simulation #
     def simulate(self):
@@ -339,7 +329,7 @@ class BufferStockModelClass(EconModelClass):
                         sim.M[i,t+1] = (1.0+par.r)*sim.A[i,t+1] + sim.Y[i,t+1]
                         sim.m[i,t+1] = sim.M[i,t+1]/sim.P[i,t+1]
 
-                        # Euler error
+                        # Euler error [TODO: consider vectorizing afterwards]
                         if sim.a[i,t+1] >= 0.001: # not constrained
                             m_interp_next =  np.concatenate((np.array([0.0]),sol.m[t+1]))
                             c_interp_next =  np.concatenate((np.array([0.0]),sol.c[t+1]))
