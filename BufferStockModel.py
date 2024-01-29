@@ -4,7 +4,7 @@ from scipy.optimize import minimize
 from EconModel import EconModelClass
 
 from consav.grids import nonlinspace
-from consav.linear_interp import interp_1d
+from consav.linear_interp import interp_1d, interp_1d_vec
 from consav.quadrature import log_normal_gauss_hermite
 
 from InterpolationFunctions import *
@@ -294,64 +294,63 @@ class BufferStockModelClass(EconModelClass):
         sim = self.sim
 
         # b. loop over individuals and time
-        for i in range(par.simN):
+        # i. initialize permanent income and normalized assets 
+        t = 0
+        sim.P[:,t] = sim.P_init[:]
+        sim.Y[:,t] = sim.P[:,t]*sim.xi[:,t]
 
-            # i. initialize permanent income and normalized assets 
-            t = 0
-            sim.P[i,t] = sim.P_init[i]
-            sim.Y[i,t] = sim.P[i,t]*sim.xi[i,t]
+        sim.a[:,t] = sim.a_init[:]
+        sim.A[:,t] = sim.a[:,t]*sim.P[:,t]
+        
+        # ii. resources (normalized)
+        sim.M[:,t] = (1.0+par.r)*sim.A[:,t] + sim.Y[:,t]
+        sim.m[:,t] = sim.M[:,t]/sim.P[:,t]
 
-            sim.a[i,t] = sim.a_init[i]
-            sim.A[i,t] = sim.a[i,t]*sim.P[i,t]
+        for t in range(par.T):
+            # add credit constraint
+            m_interp =  np.concatenate((np.array([0.0]),sol.m[t]))
+            c_interp =  np.concatenate((np.array([0.0]),sol.c[t]))
             
-            # ii. resources (normalized)
-            sim.M[i,t] = (1.0+par.r)*sim.A[i,t] + sim.Y[i,t]
-            sim.m[i,t] = sim.M[i,t]/sim.P[i,t]
+            if t<par.T: # check that simulation does not go further than solution                 
 
-            for t in range(par.T):
-                # add credit constraint
-                m_interp =  np.concatenate((np.array([0.0]),sol.m[t]))
-                c_interp =  np.concatenate((np.array([0.0]),sol.c[t]))
-                
-                if t<par.T: # check that simulation does not go further than solution                 
+                # iii. interpolate optimal consumption (normalized)
+                interp_1d_vec(m_interp,c_interp,sim.m[:,t],sim.c[:,t])
 
-                    # iii. interpolate optimal consumption (normalized)
-                    sim.c[i,t] = interp_1d(m_interp,c_interp,sim.m[i,t])
+                # iv. Update next-period states
+                if t<par.T-1:
+                    sim.P[:,t+1] = par.G*sim.P[:,t]*sim.psi[:,t+1]
+                    sim.Y[:,t+1] = sim.P[:,t+1]*sim.xi[:,t+1]
 
-                    # iv. Update next-period states
-                    if t<par.T-1:
-                        sim.P[i,t+1] = par.G*sim.P[i,t]*sim.psi[i,t+1]
-                        sim.Y[i,t+1] = sim.P[i,t+1]*sim.xi[i,t+1]
+                    sim.a[:,t+1] = sim.m[:,t] - sim.c[:,t]
+                    sim.A[:,t+1] = sim.a[:,t+1]*sim.P[:,t+1]
 
-                        sim.a[i,t+1] = sim.m[i,t] - sim.c[i,t]
-                        sim.A[i,t+1] = sim.a[i,t+1]*sim.P[i,t+1]
+                    sim.M[:,t+1] = (1.0+par.r)*sim.A[:,t+1] + sim.Y[:,t+1]
+                    sim.m[:,t+1] = sim.M[:,t+1]/sim.P[:,t+1]
 
-                        sim.M[i,t+1] = (1.0+par.r)*sim.A[i,t+1] + sim.Y[i,t+1]
-                        sim.m[i,t+1] = sim.M[i,t+1]/sim.P[i,t+1]
+                    # Euler error
+                    m_interp_next =  np.concatenate((np.array([0.0]),sol.m[t+1]))
+                    c_interp_next =  np.concatenate((np.array([0.0]),sol.c[t+1]))
 
-                        # Euler error [TODO: consider vectorizing afterwards]
-                        if sim.a[i,t+1] >= 0.001: # not constrained
-                            m_interp_next =  np.concatenate((np.array([0.0]),sol.m[t+1]))
-                            c_interp_next =  np.concatenate((np.array([0.0]),sol.c[t+1]))
+                    I = (sim.a[:,t+1]>=0.001)
+                    num = np.int_(np.sum(I))
+                    EmargV_next = np.zeros(num)
+                    c_next = np.zeros(num)
+                    for i_xi,xi in enumerate(par.xi_grid):
+                        for i_psi,psi in enumerate(par.psi_grid):
+                            fac = par.G*psi # normalization factor
 
-                            EmargV_next = 0.0
-                            for i_xi,xi in enumerate(par.xi_grid):
-                                for i_psi,psi in enumerate(par.psi_grid):
-                                    fac = par.G*psi # normalization factor
+                            # interpolate next period value function for this combination of transitory and permanent income shocks
+                            m_next = (1.0+par.r)*sim.a[I,t+1]/fac + xi
+                            interp_1d_vec(m_interp_next,c_interp_next,m_next,c_next)
+                            margV_next = self.marg_util(fac*c_next)
 
-                                    # interpolate next period value function for this combination of transitory and permanent income shocks
-                                    m_next = (1.0+par.r)*sim.a[i,t+1]/fac + xi
-                                    c_next = interp_1d(m_interp_next,c_interp_next,m_next)
-                                    margV_next = self.marg_util(fac*c_next)
+                            # weight the interpolated value with the likelihood
+                            EmargV_next += margV_next*par.xi_weight[i_xi]*par.psi_weight[i_psi]
+                    
+                    EmargV_next = par.beta*(1.0+par.r)*EmargV_next
+                    sim.euler[I,t] = sim.c[I,t] - self.inv_marg_util(EmargV_next)
+                    sim.euler[~I,t] = np.nan
 
-                                    # weight the interpolated value with the likelihood
-                                    EmargV_next += margV_next*par.xi_weight[i_xi]*par.psi_weight[i_psi]
-                            
-                            EmargV_next = par.beta*(1.0+par.r)*EmargV_next
-                            sim.euler[i,t] = sim.c[i,t] - self.inv_marg_util(EmargV_next)
-                        else:
-                            sim.euler[i,t] = np.nan
-            
         sim.mean_log10_euler = np.nanmean(np.log10( abs(sim.euler/sim.c) + 1.0e-16));
             
 
