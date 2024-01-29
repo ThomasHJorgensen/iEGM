@@ -49,9 +49,11 @@ class BufferStockModelClass(EconModelClass):
         # iEGM
         par.num_C = 30 # number of points in pre-computation grid
         par.max_C = 5.0 # maximum point in pre-computation grid
+        par.unequal_C = 1.1
 
         par.interp_method = 'linear' # linear, chebyshev
         par.interp_inverse = False # True: interpolate inverse consumption
+        par.interp_degree = 8
 
         # simulation
         par.seed = 9210
@@ -107,7 +109,7 @@ class BufferStockModelClass(EconModelClass):
         sim.psi = np.exp(par.sigma_perm*np.random.normal(size=shape) - 0.5*par.sigma_perm**2)
 
         # f. pre-computation grids
-        par.grid_C = nonlinspace(0.1,par.max_C,par.num_C,1.5)
+        par.grid_C = nonlinspace(0.1,par.max_C,par.num_C,par.unequal_C)
         par.grid_marg_U = np.nan + np.zeros(par.num_C)
 
         par.grid_C_flip = np.nan + np.zeros(par.num_C) 
@@ -176,7 +178,14 @@ class BufferStockModelClass(EconModelClass):
                     sol.c[t,ia] = self.inv_marg_util(EmargV_next)
                     
                 elif par.method=='iegm':
-                    sol.c[t,ia] = interp_1d(par.grid_marg_U_flip,par.grid_C_flip, EmargV_next)  
+
+                    if par.interp_method == 'linear':
+                        sol.c[t,ia] = interp_1d(par.grid_marg_U_flip,par.grid_C_flip, EmargV_next)  
+                    elif par.interp_method == 'regression':
+                        sol.c[t,ia] = regression_interp(EmargV_next,par.interp_coefs)
+                    else:
+                        Warning(f'interpolation method "{par.interp_method}" not implemented!')
+
                     if par.interp_inverse:
                         sol.c[t,ia] = 1.0/sol.c[t,ia] # inverse consumption has be interpolated
 
@@ -267,19 +276,23 @@ class BufferStockModelClass(EconModelClass):
         par.grid_marg_U_flip = np.flip(par.grid_marg_U)
         par.grid_C_flip = np.flip(par.grid_C)
 
-        # flip if wanted
+        # d. inverse if wanted
         if par.interp_inverse:
             par.grid_C_flip = 1.0/par.grid_C_flip # inverse consumption is interpolated
 
-        # chebyshev interpolator: NOT WORKING. must be able to evaluate function (consumption) at new points in this setup. Consider constructing interpolator formargU and then use the inverse matrix.
-        if par.interp_method == 'chebyshev':
-            points = par.grid_marg_U_flip
-            num_nodes = par.num_C
-            par.cheby_degree = par.num_C-1
+        # e. regression
+        if par.interp_method == 'regression':
+            par.interp_coefs = regression_coefs(par.grid_marg_U_flip,par.grid_C_flip,par.interp_degree)
 
-            nodes = Chebyshev_nodes(points,num_nodes)
-            par.grid_C = nodes
-            par.cheby_coefs = Chebyshev_coefs(par.grid_C_flip,num_nodes,par.cheby_degree)
+        # chebyshev interpolator: NOT WORKING. must be able to evaluate function (consumption) at new points in this setup. Consider constructing interpolator formargU and then use the inverse matrix.
+        # if par.interp_method == 'chebyshev':
+        #     points = par.grid_marg_U_flip
+        #     num_nodes = par.num_C
+        #     par.cheby_degree = par.num_C-1
+
+        #     nodes = Chebyshev_nodes(points,num_nodes)
+        #     par.grid_C = nodes
+        #     par.cheby_coefs = Chebyshev_coefs(par.grid_C_flip,num_nodes,par.cheby_degree)
 
     ##############
     # Simulation #
