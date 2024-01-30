@@ -1,4 +1,5 @@
 import numpy as np
+import numba
 from scipy import interpolate
 
 def regressions_poly(nodes,degree):
@@ -43,4 +44,4 @@ def setup_Bspline(nodes,outcomes,par,degree=3):
     par.interp_Bspline = interpolate.splrep(nodes,outcomes,s=0,k=degree)
 
 def interp_Bspline(x,par):
-    return interpolate.BSpline(*par.interp_Bspline)(x)
+    return interpolate.splev(x,par.interp_Bspline)
