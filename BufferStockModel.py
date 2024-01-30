@@ -51,7 +51,7 @@ class BufferStockModelClass(EconModelClass):
         par.max_C = 5.0 # maximum point in pre-computation grid
         par.unequal_C = 1.1
 
-        par.interp_method = 'linear' # linear, regression
+        par.interp_method = 'linear' # linear, regression, Bspline
         par.interp_inverse = False # True: interpolate inverse consumption
         par.interp_degree = 8
 
@@ -183,6 +183,9 @@ class BufferStockModelClass(EconModelClass):
                         sol.c[t,ia] = interp_1d(par.grid_marg_U_flip,par.grid_C_flip, EmargV_next)  
                     elif par.interp_method == 'regression':
                         sol.c[t,ia] = regression_interp(EmargV_next,par.interp_coefs)
+                    elif par.interp_method == 'Bspline':
+                        sol.c[t,ia] = interp_Bspline(EmargV_next,par)
+
                     else:
                         Warning(f'interpolation method "{par.interp_method}" not implemented!')
 
@@ -283,6 +286,9 @@ class BufferStockModelClass(EconModelClass):
         # e. regression
         if par.interp_method == 'regression':
             par.interp_coefs = regression_coefs(par.grid_marg_U_flip,par.grid_C_flip,par.interp_degree)
+        
+        elif par.interp_method == 'Bspline':
+            setup_Bspline(par.grid_marg_U_flip,par.grid_C_flip,par)
 
     ##############
     # Simulation #

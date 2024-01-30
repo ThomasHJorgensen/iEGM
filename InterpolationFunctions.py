@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import interpolate
 
 def regressions_poly(nodes,degree):
     # returns nodes.size-by-degree+1 array of polynomials
@@ -37,3 +38,9 @@ def regression_interp(nodes,coefs):
 
     # predict outcome
     return poly @ coefs
+
+def setup_Bspline(nodes,outcomes,par,degree=3):
+    par.interp_Bspline = interpolate.splrep(nodes,outcomes,s=0,k=degree)
+
+def interp_Bspline(x,par):
+    return interpolate.BSpline(*par.interp_Bspline)(x)
