@@ -2,6 +2,8 @@ import numpy as np
 import numba
 from scipy import interpolate
 
+from scipy.optimize import root_scalar
+
 def regressions_poly(nodes,degree):
     # returns nodes.size-by-degree+1 array of polynomials
     if not hasattr(nodes,'__len__'):
@@ -45,3 +47,9 @@ def setup_Bspline(nodes,outcomes,par,degree=3):
 
 def interp_Bspline(x,par):
     return interpolate.splev(x,par.interp_Bspline)
+
+
+def numerical_inverse(Umarg_handle,EmargU,max_C,*args):
+    obj = lambda C: Umarg_handle(C,*args) - EmargU
+    res = root_scalar(obj,bracket=[1.0e-6,max_C],method='bisect')
+    return res.root

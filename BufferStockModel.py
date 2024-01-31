@@ -185,7 +185,8 @@ class BufferStockModelClass(EconModelClass):
                         sol.c[t,ia] = regression_interp(EmargV_next,par.interp_coefs)
                     elif par.interp_method == 'Bspline':
                         sol.c[t,ia] = interp_Bspline(EmargV_next,par)
-
+                    elif par.interp_method == 'numerical':
+                        sol.c[t,ia] = numerical_inverse(self.marg_util,EmargV_next,par.max_C*2)
                     else:
                         Warning(f'interpolation method "{par.interp_method}" not implemented!')
 
