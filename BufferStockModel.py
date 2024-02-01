@@ -48,7 +48,7 @@ class BufferStockModelClass(EconModelClass):
 
         # iEGM
         par.num_C = 30 # number of points in pre-computation grid
-        par.max_C = 5.0 # maximum point in pre-computation grid
+        par.max_C = 10.0 # maximum point in pre-computation grid
         par.unequal_C = 1.1
 
         par.interp_method = 'linear' # linear, regression, Bspline
@@ -186,7 +186,7 @@ class BufferStockModelClass(EconModelClass):
                     elif par.interp_method == 'Bspline':
                         sol.c[t,ia] = interp_Bspline(EmargV_next,par)
                     elif par.interp_method == 'numerical':
-                        sol.c[t,ia] = numerical_inverse(self.marg_util,EmargV_next,par.max_C*2)
+                        sol.c[t,ia] = numerical_inverse(self.marg_util,EmargV_next,par.max_C)
                     else:
                         Warning(f'interpolation method "{par.interp_method}" not implemented!')
 
