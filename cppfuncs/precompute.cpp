@@ -163,7 +163,7 @@ namespace precompute{
     } // precompute func
 
 
-    void precompute(sol_struct* sol, par_struct* par){
+    EXPORT void precompute(sol_struct* sol, par_struct* par){
         #pragma omp parallel num_threads(par->threads)      
         {   
             // pre-compute optimal allocation for couple
@@ -195,6 +195,8 @@ namespace precompute{
         double margU;
         int iP;
         par_struct *par;
+        bool do_print;
+        double guess;
     } solver_inv_struct;
 
     double obj_inv_marg_util_couple(unsigned n, const double *x, double *grad, void *solver_data_in){
@@ -204,29 +206,34 @@ namespace precompute{
         double C_tot = x[0];
         double margU = solver_data->margU;
         int iP = solver_data->iP;
+        bool do_print = solver_data->do_print;
         par_struct *par = solver_data->par;
 
         // clip
         double penalty = 0.0;
-        if (C_tot < 0.0) {
+        if (C_tot <= 0.0) {
             penalty += 1000.0*C_tot*C_tot;
             C_tot = 1.0e-6;
         }
 
         // return squared difference
         double diff = marg_util_C_couple(C_tot,iP,par) - margU;
+
+        if (do_print){
+            logs::write("inverse_log.txt",1,"C_tot: %f, diff: %f, penalty: %f\n",C_tot,diff,penalty);
+        }
         return diff*diff + penalty;
 
     }
 
-    EXPORT double inv_marg_util_couple(double margU, int iP,par_struct* par, double guess = 3.0){
+    EXPORT double inv_marg_util_couple(double margU, int iP,par_struct* par, double guess = 3.0, bool do_print=false){
         // setup numerical solver
         solver_inv_struct* solver_data = new solver_inv_struct;  
                 
         int const dim = 1;
         double lb[dim],ub[dim],x[dim];   
         
-        auto opt = nlopt_create(NLOPT_LN_BOBYQA, dim); // NLOPT_LD_MMA NLOPT_LD_LBFGS NLOPT_GN_ORIG_DIRECT
+        auto opt = nlopt_create(NLOPT_LN_BOBYQA, dim); // NLOPT_LD_MMA NLOPT_LD_LBFGS NLOPT_GN_ORIG_DIRECT NLOPT_LN_BOBYQA
         double minf=0.0;
 
         // search over optimal total consumption, C
@@ -234,8 +241,17 @@ namespace precompute{
         solver_data->margU = margU;         
         solver_data->iP = iP;
         solver_data->par = par;
+        solver_data->do_print = do_print;
+        solver_data->guess = guess;
+
+        if (do_print){
+            logs::write("inverse_log.txt",0,"margU: %f, iP: %d\n",margU,iP);
+        }
+
         nlopt_set_min_objective(opt, obj_inv_marg_util_couple, solver_data);   
         nlopt_set_maxeval(opt, 2000);
+        nlopt_set_ftol_rel(opt, 1.0e-6);
+        nlopt_set_xtol_rel(opt, 1.0e-5);
 
         // bounds
         lb[0] = 0.0;  

@@ -27,6 +27,8 @@ typedef struct par_struct
  double* prob_partner_A_m;
  bool interp_inverse;
  char* interp_method;
+ bool use_guess;
+ double* guess_inv;
  int num_Ctot;
  double max_Ctot;
  bool do_egm;
@@ -119,6 +121,7 @@ double* get_double_p_par_struct(par_struct* x, char* name){
 
  if( strcmp(name,"prob_partner_A_w") == 0 ){ return x->prob_partner_A_w; }
  else if( strcmp(name,"prob_partner_A_m") == 0 ){ return x->prob_partner_A_m; }
+ else if( strcmp(name,"guess_inv") == 0 ){ return x->guess_inv; }
  else if( strcmp(name,"grid_A") == 0 ){ return x->grid_A; }
  else if( strcmp(name,"grid_Aw") == 0 ){ return x->grid_Aw; }
  else if( strcmp(name,"grid_Am") == 0 ){ return x->grid_Am; }
@@ -152,6 +155,7 @@ double* get_double_p_par_struct(par_struct* x, char* name){
 bool get_bool_par_struct(par_struct* x, char* name){
 
  if( strcmp(name,"interp_inverse") == 0 ){ return x->interp_inverse; }
+ else if( strcmp(name,"use_guess") == 0 ){ return x->use_guess; }
  else if( strcmp(name,"do_egm") == 0 ){ return x->do_egm; }
  else if( strcmp(name,"analytic_marg_u_single") == 0 ){ return x->analytic_marg_u_single; }
  else if( strcmp(name,"analytic_inv_marg_u_single") == 0 ){ return x->analytic_inv_marg_u_single; }

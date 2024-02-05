@@ -273,8 +273,13 @@ namespace couple {
                 // iii. Get total consumption by interpolation of pre-computed inverse marginal utility (coming from Euler)
                 if (strcmp(par->interp_method,"numerical")==0){
                     double guess = 3.0;
-                    if(iA_pd>0){
-                        guess = sol->C_tot_pd[index::couple_pd(t,iP,iL,iA_pd-1,par)];
+                    if (par->use_guess){
+                        guess = sol->C_tot_pd[index::couple_pd(t,iP,iL,iA_pd,par)];
+                    }
+                    else{
+                        if(iA_pd){
+                            guess = sol->C_tot_pd[index::couple_pd(t,iP,iL,iA_pd-1,par)];
+                        }
                     }
                     sol->C_tot_pd[idx_pd] = precompute::inv_marg_util_couple(sol->EmargU_pd[idx_pd],iP,par,guess); // numerical inverse
 

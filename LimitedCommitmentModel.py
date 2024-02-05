@@ -6,6 +6,7 @@ from EconModel import EconModelClass
 from consav.grids import nonlinspace
 from consav import linear_interp, linear_interp_1d
 from consav import quadrature
+import scipy.stats as stats
 
 import time
 
@@ -82,6 +83,9 @@ class HouseholdModelClass(EconModelClass):
         # pre-computation
         par.interp_inverse = False # True: interpolate inverse consumption
         par.interp_method = 'linear'
+
+        par.use_guess = False
+        par.guess_inv = np.nan
 
         par.num_Ctot = 100
         par.max_Ctot = par.max_A*2
@@ -323,12 +327,22 @@ class HouseholdModelClass(EconModelClass):
     
         if np.isnan(par.prob_partner_A_m[0,0]):
             par.prob_partner_A_m = np.eye(par.num_A) #np.ones((par.num_A,par.num_A))/par.num_A # likelihood of meeting a partner with a particular level of wealth, conditional on own
-
-        # TODO: update probabilities to be normal with same variance as solution: difference in CDF between points
-        par.prob_partner_love = np.ones(par.num_love)/par.num_love # likelihood of love shock
+       
+        # Norm distributed initial love - note: Probability mass between points (approximation of continuous distribution)
+        if par.sigma_love<=1.0e-6:
+            love_cdf = np.where(par.grid_love>=0.0,1.0,0.0)
+        else:
+            love_cdf = stats.norm.cdf(par.grid_love,0.0,par.sigma_love)
+        par.prob_partner_love = np.diff(love_cdf,1)
+        par.prob_partner_love = np.append(par.prob_partner_love,0.0) # lost last point in diff
+        # par.prob_partner_love = np.ones(par.num_love)/par.num_love # uniform
 
         par.cdf_partner_Aw = np.cumsum(par.prob_partner_A_w,axis=1) # cumulative distribution to be used in simulation
         par.cdf_partner_Am = np.cumsum(par.prob_partner_A_m,axis=1)
+
+        if par.use_guess:
+            if np.any(np.isnan(par.guess_inv)):
+                par.guess_inv = np.ones((par.num_A,par.num_power,par.num_love,par.num_A_pd))
 
 
     def solve(self):
