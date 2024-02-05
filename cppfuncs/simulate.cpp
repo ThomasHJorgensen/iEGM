@@ -95,7 +95,7 @@ namespace sim {
     } // update_power
 
 
-    double draw_partner_assets(double A, int gender, int i, int t, sim_struct *sim, par_struct *par){
+    double draw_partner_assets_cont(double A, int gender, int i, int t, sim_struct *sim, par_struct *par){
         // unpack
         double* cdf_partner_A = par->cdf_partner_Aw;
         double* grid_A = par->grid_Aw;
@@ -127,7 +127,8 @@ namespace sim {
 
         return A_sim;
     }
-    double draw_partner_assets_tj(double A, int gender, int i, int t, sim_struct *sim, par_struct *par){
+
+    double draw_partner_assets(double A, int gender, int i, int t, sim_struct *sim, par_struct *par){
         // unpack
         double* cdf_partner_A = par->cdf_partner_Aw;
         double* grid_A = par->grid_Aw;
@@ -174,37 +175,30 @@ namespace sim {
         // b. Setup values for being in couple
         double Vw_single_to_couple = 0.0;
         double Vm_single_to_couple = 0.0;
-        double nash_surplus = 0.0;
-
-        int max_idx = -1;
-        double max_nash_surplus = 0.0; 
         double A_tot = Aw+Am;
-
-        // TODO: consider constructing vector of Sw/Sm and use "bargaining::initial_weight"
-        double Sw = 0;
-        double Sm = 0;
-
         int iA = tools::binary_search(0, par->num_A, par->grid_A, A_tot);
+        
+        // c. Calculate surplus of being in couple
+        double* Sw = new double[par->num_power];
+        double* Sm = new double[par->num_power];
 
-        // c. loop over bargaining weights
         for (int iP=0; iP < par->num_power; iP++){
             int idx_interp = index::couple(t, iP, iL, 0, par);
             Vw_single_to_couple = tools::interp_1d_index(par->grid_A, par->num_A, &sol->Vw_single_to_couple[idx_interp], A_tot, iA);
             Vm_single_to_couple = tools::interp_1d_index(par->grid_A, par->num_A, &sol->Vm_single_to_couple[idx_interp], A_tot, iA);
-            Sw = Vw_single_to_couple - Vw_single;
-            Sm = Vm_single_to_couple - Vm_single;
-
-            // c.1. find power idx that maxes Nash surplus
-            if ((Sw>0) & (Sm>0)){
-                nash_surplus = Sw*Sm;
-                if (nash_surplus > max_nash_surplus){
-                    max_nash_surplus = nash_surplus;
-                    max_idx = iP;
-                }
-            }
+            Sw[iP] = Vw_single_to_couple - Vw_single;
+            Sm[iP] = Vm_single_to_couple - Vm_single;
         }
 
-        return max_idx;
+        // d. Calculate initial bargaining weight
+        int init_mu = bargaining::initial_weight(Sw, Sm, par);
+
+        // e. clean up
+        delete Sw;
+        delete Sm;
+
+        return init_mu;
+
     }
 
 
@@ -314,13 +308,18 @@ namespace sim {
                             C_tot = tools::interp_3d(par->grid_power,par->grid_love,par->grid_A,par->num_power,par->num_love,par->num_A ,&sol->C_tot_couple_to_couple[idx_sol],power,love,A_lag);
                         }
 
+                        // enforce ressource constraint (may be slightly broken due to approximation error)
+                        double M_resources = couple::resources(A_lag,par);
+                        if (C_tot > M_resources){
+                            C_tot = M_resources;
+                        }
+
                         double C_pub = 0.0;
                         couple::intraperiod_allocation_sim(&sim->Cw_priv[it], &sim->Cm_priv[it], &C_pub,  C_tot,power,sol,par); 
                         sim->Cw_pub[it] = C_pub;
                         sim->Cm_pub[it] = C_pub;
 
                         // update end-of-period states
-                        double M_resources = couple::resources(A_lag,par); 
                         sim->A[it] = M_resources - sim->Cw_priv[it] - sim->Cm_priv[it] - C_pub;
                         if(t<par->simT-1){
                             sim->love[it1] = love + par->sigma_love*sim->draw_love[it1];
@@ -332,8 +331,6 @@ namespace sim {
 
                         sim->power[it] = power;
 
-                        // sim->power_idx[it] = power_idx;
-                        // sim->power[it] = par->grid_power[power_idx];
 
                     } else { // single
 
@@ -350,22 +347,26 @@ namespace sim {
                         double Cw_tot = tools::interp_1d(par->grid_Aw,par->num_A,sol_single_w,Aw_lag);
                         double Cm_tot = tools::interp_1d(par->grid_Am,par->num_A,sol_single_m,Am_lag);
 
+                        // enforce ressource constraint (may be slightly broken due to approximation error)
+                        double Mw = single::resources(A_lag, woman, par);
+                        double Mm = single::resources(A_lag, man, par);
+                        if (Cw_tot > Mw){
+                            Cw_tot = Mw;
+                        }
+                        if (Cm_tot > Mm){
+                            Cm_tot = Mm;
+                        }
+                        
                         single::intraperiod_allocation(&sim->Cw_priv[it],&sim->Cw_pub[it],Cw_tot,woman,par);
                         single::intraperiod_allocation(&sim->Cm_priv[it],&sim->Cm_pub[it],Cm_tot,man,par);
 
-                        // update end-of-period states
-                        double Mw = single::resources(Aw_lag,woman,par); 
-                        double Mm = single::resources(Am_lag,man,par); 
+                        // update end-of-period states  
                         sim->Aw[it] = Mw - sim->Cw_priv[it] - sim->Cw_pub[it];
                         sim->Am[it] = Mm - sim->Cm_priv[it] - sim->Cm_pub[it];
 
                         // sim->power_idx[it] = -1;
                         sim->power[it] = -1.0;
 
-                        // left as nans by not updating them:
-                        // sim->power[it1] = nan
-                        // sim->love[it] = nan
-                        // sim->A[it] = nan
                     }
 
                 } // t
