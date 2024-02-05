@@ -59,7 +59,9 @@ namespace precompute{
         nlopt_set_lower_bounds(opt, lb);
         nlopt_set_upper_bounds(opt, ub);
 
-        // optimize
+        // optimize TODO: fix initial guess
+        // x[0] = Cw_priv[0];
+        // x[1] = Cm_priv[0];
         x[0] = solver_data->C_tot/3.0;
         x[1] = solver_data->C_tot/3.0;
         nlopt_optimize(opt, x, &minf);          
@@ -116,50 +118,46 @@ namespace precompute{
     }
 
 
-    double util_C_couple(double C_tot, int iP, int iL, par_struct* par){
+    double util_C_couple(double C_tot, int iP, int iL, par_struct* par, double* Cw_priv, double* Cm_priv){
         double love = par->grid_love[iL];
         double power = par->grid_power[iP];
-        double Cw_priv {};
-        double Cm_priv {};
-        double C_pub {};
+        double C_pub = 0.0;
 
-        solve_intraperiod_couple(&Cw_priv, &Cm_priv, &C_pub , C_tot,power,par);
+        solve_intraperiod_couple(Cw_priv, Cm_priv, &C_pub , C_tot,power,par); // this will update Cw_priv, Cm_priv, C_pub
 
-        return utils::util_couple(Cw_priv,Cm_priv,C_pub,iP,iL,par);
+        return utils::util_couple(*Cw_priv,*Cm_priv,C_pub,iP,iL,par);
     }
 
     double marg_util_C_couple(double C_tot, int iP, par_struct* par){
         // baseline utility (could be passed as argument to avoid recomputation of utility at C_tot)
         int iL = 0; // does not matter for the marginal utility     
-        double util = util_C_couple(C_tot,iP,iL,par);
+
+        // TODO: starting values not in effect now. Not working for some reason
+        double Cw_priv = C_tot/3.0; // could be smarter about this. Would require initialization in the precomute below.
+        double Cm_priv = C_tot/3.0;
+        double util = util_C_couple(C_tot,iP,iL,par, &Cw_priv,&Cm_priv); // this will update Cw_priv, Cm_priv
 
         // forward difference
         double delta = 0.0001;
-        double util_delta = util_C_couple(C_tot + delta,iP,iL,par);
+        Cw_priv = C_tot/3.0; // could be smarter about this. Would require initialization in the precomute below.
+        Cm_priv = C_tot/3.0;
+        double util_delta = util_C_couple(C_tot + delta,iP,iL,par, &Cw_priv,&Cm_priv);
 
         // return marginal utility
         return (util_delta - util)/delta;
     }
 
     void precompute_margu_couple(int i, int iP, par_struct *par, sol_struct *sol){
-        // TODO: this could use the function above instead
+        
         double C_tot = par->grid_C_for_marg_u[i];
         int idx = index::index2(iP,i,par->num_power,par->num_marg_u);   
 
         // calculate marginal utility and inverse marginal utility for EGM
-        int iL = 0; // does not matter for the marginal utility     
-
-        // utility at current allocation 
-        double util = util_C_couple(C_tot,iP,iL,par);
-        par->grid_util[idx] = util; //<-------------- AMO: delete if unnecessary
-
-        // marginal utility
-        double delta = 0.0001;
-        double util_delta = util_C_couple(C_tot + delta,iP,iL,par);
-        par->grid_marg_u[idx] = (util_delta- util)/(delta);
+        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,iP,par);
 
         int idx_flip = index::index2(iP,par->num_marg_u-1 - i,par->num_power,par->num_marg_u);
         par->grid_marg_u_for_inv[idx_flip] = par->grid_marg_u[idx];
+
     } // precompute func
 
 
@@ -169,8 +167,8 @@ namespace precompute{
             // pre-compute optimal allocation for couple
             #pragma omp for         
             for (int i=0; i<par->num_Ctot; i++){  
+                double C_tot = par->grid_Ctot[i];
                 for (int iP=0; iP < par->num_power; iP++){
-                    double C_tot = par->grid_Ctot[i];
                     int idx = index::index2(iP,i,par->num_power,par->num_Ctot);         
                     solve_intraperiod_couple(&sol->pre_Ctot_Cw_priv[idx], &sol->pre_Ctot_Cm_priv[idx], &sol->pre_Ctot_C_pub[idx] , C_tot,par->grid_power[iP],par);
                 } // power
@@ -179,7 +177,7 @@ namespace precompute{
             // pre-compute marginal utilities for EGM
             if (par->do_egm){
                 #pragma omp for
-                for (int i=0; i<par->num_marg_u; i++){  
+                for (int i=0; i<par->num_marg_u; i++){ 
                     precompute_margu_single(i, woman, par);
                     precompute_margu_single(i, man, par);
                     for (int iP=0; iP < par->num_power; iP++){
@@ -196,7 +194,6 @@ namespace precompute{
         int iP;
         par_struct *par;
         bool do_print;
-        double guess;
     } solver_inv_struct;
 
     double obj_inv_marg_util_couple(unsigned n, const double *x, double *grad, void *solver_data_in){
@@ -241,8 +238,7 @@ namespace precompute{
         solver_data->margU = margU;         
         solver_data->iP = iP;
         solver_data->par = par;
-        solver_data->do_print = do_print;
-        solver_data->guess = guess;
+        solver_data->do_print = do_print;        
 
         if (do_print){
             logs::write("inverse_log.txt",0,"margU: %f, iP: %d\n",margU,iP);
@@ -260,9 +256,7 @@ namespace precompute{
         nlopt_set_upper_bounds(opt, ub);
 
         // optimize
-        // x[0] = par->max_Ctot/2.0;
-        // x[0] = 3.0; // TODO: more intelligent initial guess. same for marginal utility
-        x[0] = guess; // TODO: more intelligent initial guess. same for marginal utility
+        x[0] = guess; 
         nlopt_optimize(opt, x, &minf);          
         nlopt_destroy(opt);                 
         
