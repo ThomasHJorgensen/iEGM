@@ -369,6 +369,13 @@ namespace sim {
 
                     }
 
+                    // Euler Errors
+                    if (sim->couple[it]){
+                    } else {
+                        // expected marginal utility, as in solution: also over re-partnering
+                        // sim->euler[it] = inv_marg_util_C(Emarg_w,woman,par); // store Euler for women
+                    }
+
                 } // t
             } // i
 
