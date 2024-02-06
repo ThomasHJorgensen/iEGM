@@ -143,3 +143,9 @@ venv.bak/
 *.exe
 *.out
 *.app
+
+# Ignore all _struct.cpp files
+*_struct.cpp
+
+# Ignore dll
+*.dll
