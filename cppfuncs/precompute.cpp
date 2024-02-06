@@ -313,7 +313,7 @@ namespace precompute{
         solver_data->do_print = do_print;        
 
         if (do_print){
-            logs::write("inverse_log.txt",0,"margU: %f, iP: %d\n",margU,iP);
+            logs::write("inverse_log.txt",0,"margU: %f\n",margU);
         }
 
         nlopt_set_min_objective(opt, obj_inv_marg_util_single, solver_data);   
