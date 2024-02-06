@@ -119,30 +119,29 @@ namespace precompute{
     }
 
 
-    double util_C_couple(double C_tot, int iP, int iL, par_struct* par, double* Cw_priv, double* Cm_priv){
+    double util_C_couple(double C_tot, double power, int iL, par_struct* par, double* Cw_priv, double* Cm_priv){
         double love = par->grid_love[iL];
-        double power = par->grid_power[iP];
         double C_pub = 0.0;
 
         solve_intraperiod_couple(Cw_priv, Cm_priv, &C_pub , C_tot,power,par); // this will update Cw_priv, Cm_priv, C_pub
 
-        return utils::util_couple(*Cw_priv,*Cm_priv,C_pub,iP,iL,par);
+        return utils::util_couple(*Cw_priv,*Cm_priv,C_pub,power,iL,par);
     }
 
-    double marg_util_C_couple(double C_tot, int iP, par_struct* par){
+    double marg_util_C_couple(double C_tot, double power, par_struct* par){
         // baseline utility (could be passed as argument to avoid recomputation of utility at C_tot)
-        int iL = 0; // does not matter for the marginal utility     
+        int iL = 0; // does not matter for the marginal utility   
 
         // TODO: starting values not in effect now. Not working for some reason
         double Cw_priv = C_tot/3.0; // could be smarter about this. Would require initialization in the precomute below.
         double Cm_priv = C_tot/3.0;
-        double util = util_C_couple(C_tot,iP,iL,par, &Cw_priv,&Cm_priv); // this will update Cw_priv, Cm_priv
+        double util = util_C_couple(C_tot,power,iL,par, &Cw_priv,&Cm_priv); // this will update Cw_priv, Cm_priv
 
         // forward difference
         double delta = 0.0001;
         Cw_priv = C_tot/3.0; // could be smarter about this. Would require initialization in the precomute below.
         Cm_priv = C_tot/3.0;
-        double util_delta = util_C_couple(C_tot + delta,iP,iL,par, &Cw_priv,&Cm_priv);
+        double util_delta = util_C_couple(C_tot + delta,power,iL,par, &Cw_priv,&Cm_priv);
 
         // return marginal utility
         return (util_delta - util)/delta;
@@ -153,8 +152,10 @@ namespace precompute{
         double C_tot = par->grid_C_for_marg_u[i];
         int idx = index::index2(iP,i,par->num_power,par->num_marg_u);   
 
+        double power = par->grid_power[iP];
+
         // calculate marginal utility and inverse marginal utility for EGM
-        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,iP,par);
+        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,power,par);
 
         int idx_flip = index::index2(iP,par->num_marg_u-1 - i,par->num_power,par->num_marg_u);
         par->grid_marg_u_for_inv[idx_flip] = par->grid_marg_u[idx];
@@ -192,7 +193,7 @@ namespace precompute{
     // numerical inverse marginal utility
     typedef struct { 
         double margU;
-        int iP;
+        double power;
         int gender;
         par_struct *par;
         bool do_print;
@@ -204,7 +205,7 @@ namespace precompute{
         
         double C_tot = x[0];
         double margU = solver_data->margU;
-        int iP = solver_data->iP;
+        double power = solver_data->power;
         bool do_print = solver_data->do_print;
         par_struct *par = solver_data->par;
 
@@ -216,7 +217,7 @@ namespace precompute{
         }
 
         // return squared difference
-        double diff = marg_util_C_couple(C_tot,iP,par) - margU;
+        double diff = marg_util_C_couple(C_tot,power,par) - margU;
 
         if (do_print){
             logs::write("inverse_log.txt",1,"C_tot: %f, diff: %f, penalty: %f\n",C_tot,diff,penalty);
@@ -225,7 +226,7 @@ namespace precompute{
 
     }
 
-    EXPORT double inv_marg_util_couple(double margU, int iP,par_struct* par, double guess = 3.0, bool do_print=false){
+    EXPORT double inv_marg_util_couple(double margU, double power,par_struct* par, double guess = 3.0, bool do_print=false){
         // setup numerical solver
         solver_inv_struct* solver_data = new solver_inv_struct;  
                 
@@ -238,12 +239,12 @@ namespace precompute{
         // search over optimal total consumption, C
         // settings
         solver_data->margU = margU;         
-        solver_data->iP = iP;
+        solver_data->power = power;
         solver_data->par = par;
         solver_data->do_print = do_print;        
 
         if (do_print){
-            logs::write("inverse_log.txt",0,"margU: %f, iP: %d\n",margU,iP);
+            logs::write("inverse_log.txt",0,"margU: %f\n",margU);
         }
 
         nlopt_set_min_objective(opt, obj_inv_marg_util_couple, solver_data);   

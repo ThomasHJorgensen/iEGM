@@ -84,9 +84,6 @@ class HouseholdModelClass(EconModelClass):
         par.interp_inverse = False # True: interpolate inverse consumption
         par.interp_method = 'linear'
 
-        par.use_guess = False
-        par.guess_inv = np.nan
-
         par.num_Ctot = 100
         par.max_Ctot = par.max_A*2
         
@@ -343,9 +340,6 @@ class HouseholdModelClass(EconModelClass):
         par.cdf_partner_Aw = np.cumsum(par.prob_partner_A_w,axis=1) # cumulative distribution to be used in simulation
         par.cdf_partner_Am = np.cumsum(par.prob_partner_A_m,axis=1)
 
-        if par.use_guess:
-            if np.any(np.isnan(par.guess_inv)):
-                par.guess_inv = np.ones((par.num_A,par.num_power,par.num_love,par.num_A_pd))
 
 
     def solve(self):

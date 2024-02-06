@@ -277,7 +277,7 @@ namespace sim {
                         int iL = 0;
                         // draw partner type
                         if (meet){
-                            Ap = draw_partner_assets_cont(Aw_lag, woman, i,t, sim, par);
+                            Ap = draw_partner_assets(Aw_lag, woman, i,t, sim, par);
                             sim->A_own[it] = Aw_lag;
                             sim->A_partner[it] = Ap;
                             iL = sim->draw_repartner_iL[it]; // note: love draws on grid.

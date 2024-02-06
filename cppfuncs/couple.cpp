@@ -281,7 +281,8 @@ namespace couple {
                             guess = sol->C_tot_pd[index::couple_pd(t,iP,iL,iA_pd-1,par)];
                         }
                     // }
-                    sol->C_tot_pd[idx_pd] = precompute::inv_marg_util_couple(sol->EmargU_pd[idx_pd],iP,par,guess); // numerical inverse
+                    double power = par->grid_power[iP];
+                    sol->C_tot_pd[idx_pd] = precompute::inv_marg_util_couple(sol->EmargU_pd[idx_pd],power,par,guess); // numerical inverse
 
                 } else {
                     if(strcmp(par->interp_method,"linear")==0){
