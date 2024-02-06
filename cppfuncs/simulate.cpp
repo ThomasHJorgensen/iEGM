@@ -313,6 +313,7 @@ namespace sim {
                         if (C_tot > M_resources){
                             C_tot = M_resources;
                         }
+                        sim->C_tot[it] = C_tot;
 
                         double C_pub = 0.0;
                         couple::intraperiod_allocation_sim(&sim->Cw_priv[it], &sim->Cm_priv[it], &C_pub,  C_tot,power,sol,par); 
@@ -356,6 +357,9 @@ namespace sim {
                         if (Cm_tot > Mm){
                             Cm_tot = Mm;
                         }
+
+                        sim->Cm_tot[it] = Cm_tot;
+                        sim->Cw_tot[it] = Cw_tot;
                         
                         single::intraperiod_allocation(&sim->Cw_priv[it],&sim->Cw_pub[it],Cw_tot,woman,par);
                         single::intraperiod_allocation(&sim->Cm_priv[it],&sim->Cm_pub[it],Cm_tot,man,par);
@@ -370,7 +374,7 @@ namespace sim {
                     }
 
                     // Euler Errors
-                    if (t<par->simT){ //no euler error in last period
+                    if (t<par->simT-1){ //no euler error in last period
                         if (sim->couple[it]){
                             // for couples: quadrature over love shocks
                             double Emarg_next= 0.0;
@@ -381,18 +385,25 @@ namespace sim {
                             int idx_interp = index::couple(t+1,0,0,0,par);
 
                             for (int iL=0;iL<par->num_shock_love; iL++){
-                                //interp marginal value from "true" solution -> for now "true" solution is just solution grid, but update with something from a denser grid later
+                                //TODO: interp marginal value from "true" solution -> for now "true" solution is just solution grid, but update with something from a denser grid later
                                 double love_next = love + par->grid_shock_love[iL];
-                                Emarg_next += tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->margV_start_as_couple[idx_interp], power, love_next, A);
+                                Emarg_next += par->grid_weight_love[iL]*tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->margV_start_as_couple[idx_interp], power, love_next, A);
                             }
 
                             double C_tot = sim->C_tot[it];
-                            sim->euler[it] = Emarg_next; //precompute::inv_marg_util_couple(Emarg_next, iP, par, C_tot);
+                            sim->euler[it] = C_tot - precompute::inv_marg_util_couple(Emarg_next, power, par, C_tot);
 
                         } else {
                             // expected marginal utility, as in solution: also over re-partnering
-                            // sim->euler[it] = inv_marg_util_C(Emarg_w,woman,par); // store Euler for women
-                            ;
+                            int idx_interp = index::single(t+1,0,par);
+                            double Aw = sim->Aw[it];
+                            
+                            // TODO: get from "true" solution 
+                            double Emarg_single = tools::interp_1d(par->grid_Aw,par->num_A,&sol->EmargVw_start_as_single[idx_interp],Aw);
+                       
+                            double Cw_tot = sim->Cw_tot[it];
+                            sim->euler[it] = Cw_tot -  precompute::inv_marg_util_single(Emarg_single, woman, par, C_tot); //numerical version
+                            sim->euler[it] = Cw_tot - utils::inv_marg_util_C(Emarg_single,woman,par); //analytical version
                         }
                     }
 

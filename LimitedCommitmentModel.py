@@ -240,6 +240,7 @@ class HouseholdModelClass(EconModelClass):
 
         # euler errors
         sim.euler = np.nan + np.ones((par.simN, par.simT))
+        sim.mean_log10_euler = np.array([np.nan])
 
         # containers for verifying simulaton
         sim.A_own = np.nan + np.ones(shape_sim)
@@ -368,9 +369,13 @@ class HouseholdModelClass(EconModelClass):
 
         self.cpp.simulate(sim,sol,par)
 
+        couple = sim.couple == 1
+        single = ~couple
+        sim.mean_log10_euler[0] = np.nanmean(np.log10( abs(sim.euler[couple]/sim.C_tot[couple]) + 1.0e-16)) + np.nanmean(np.log10( abs(sim.euler[single]/sim.Cw_tot[single]) + 1.0e-16))
+
         # total consumption
-        sim.Cw_tot = sim.Cw_priv + sim.Cw_pub
-        sim.Cm_tot = sim.Cm_priv + sim.Cm_pub
-        sim.C_tot = sim.Cw_priv + sim.Cm_priv + sim.Cw_pub
+        # sim.Cw_tot = sim.Cw_priv + sim.Cw_pub
+        # sim.Cm_tot = sim.Cm_priv + sim.Cm_pub
+        # sim.C_tot = sim.Cw_priv + sim.Cm_priv + sim.Cw_pub
 
         
