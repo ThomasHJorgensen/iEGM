@@ -370,10 +370,30 @@ namespace sim {
                     }
 
                     // Euler Errors
-                    if (sim->couple[it]){
-                    } else {
-                        // expected marginal utility, as in solution: also over re-partnering
-                        // sim->euler[it] = inv_marg_util_C(Emarg_w,woman,par); // store Euler for women
+                    if (t<par->simT){ //no euler error in last period
+                        if (sim->couple[it]){
+                            // for couples: quadrature over love shocks
+                            double Emarg_next= 0.0;
+                            double A = sim->A[it];
+                            double love = sim->love[it];
+                            double power = sim->power[it];
+
+                            int idx_interp = index::couple(t+1,0,0,0,par);
+
+                            for (int iL=0;iL<par->num_shock_love; iL++){
+                                //interp marginal value from "true" solution -> for now "true" solution is just solution grid, but update with something from a denser grid later
+                                double love_next = love + par->grid_shock_love[iL];
+                                Emarg_next += tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->margV_start_as_couple[idx_interp], power, love_next, A);
+                            }
+
+                            double C_tot = sim->C_tot[it];
+                            sim->euler[it] = Emarg_next; //precompute::inv_marg_util_couple(Emarg_next, iP, par, C_tot);
+
+                        } else {
+                            // expected marginal utility, as in solution: also over re-partnering
+                            // sim->euler[it] = inv_marg_util_C(Emarg_w,woman,par); // store Euler for women
+                            ;
+                        }
                     }
 
                 } // t

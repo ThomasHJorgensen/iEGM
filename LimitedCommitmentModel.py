@@ -241,6 +241,9 @@ class HouseholdModelClass(EconModelClass):
         sim.power = np.nan + np.ones(shape_sim)
         sim.love = np.nan + np.ones(shape_sim)
 
+        # euler errors
+        sim.euler = np.nan + np.ones((par.simN, par.simT))
+
         # containers for verifying simulaton
         sim.A_own = np.nan + np.ones(shape_sim)
         sim.A_partner = np.nan + np.ones(shape_sim)

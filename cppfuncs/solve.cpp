@@ -31,3 +31,21 @@ EXPORT void simulate(sim_struct *sim, sol_struct *sol, par_struct *par){
     sim::model(sim,sol,par);
 
 }
+
+
+EXPORT void compute_margEV(sol_struct* sol, par_struct* par){
+    for (int t = 0; t < par->T; t++){
+        single::calc_marginal_value_single(t, woman, sol, par);
+        single::calc_marginal_value_single(t, man, sol, par);
+
+        for (int iP=0; iP<par->num_power; iP++){
+            for (int iL=0; iL<par->num_love; iL++){
+                int idx = index::couple(t,iP,iL,0,par);
+                double* Vw = &sol->Vw_start_as_couple[idx];
+                double* Vm = &sol->Vm_start_as_couple[idx];
+                double* margV = &sol->margV_start_as_couple[idx];
+                couple::calc_marginal_value_couple(t, iP, iL, Vw, Vm, margV, sol, par);
+            }
+        }
+    }
+}
