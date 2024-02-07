@@ -201,6 +201,10 @@ class HouseholdModelClass(EconModelClass):
         sol.Vm_start_as_couple = np.nan + np.ones(shape_couple)
         sol.margV_start_as_couple = np.zeros(shape_couple) 
 
+        sol.EVw_start_as_couple = np.nan + np.ones(shape_couple)
+        sol.EVm_start_as_couple = np.nan + np.ones(shape_couple)
+        sol.EmargV_start_as_couple = np.nan + np.ones(shape_couple)
+        
         sol.Cw_priv_start_as_couple = np.nan + np.ones(shape_couple)             # private consumption, couple
         sol.Cm_priv_start_as_couple = np.nan + np.ones(shape_couple)             
         sol.C_pub_start_as_couple = np.nan + np.ones(shape_couple)               # public consumption, couple
