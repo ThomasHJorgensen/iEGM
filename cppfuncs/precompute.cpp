@@ -33,7 +33,6 @@ namespace precompute{
     }
 
     void solve_intraperiod_couple(double* Cw_priv,double* Cm_priv,double* C_pub , double C_tot,double power,par_struct *par){
-        
         // setup numerical solver
         solver_precompute_struct* solver_data = new solver_precompute_struct;  
                 
@@ -50,6 +49,8 @@ namespace precompute{
         solver_data->par = par;
         nlopt_set_min_objective(opt, objfunc_precompute, solver_data);   
         nlopt_set_maxeval(opt, 2000);
+        nlopt_set_ftol_rel(opt, 1.0e-6);
+        nlopt_set_xtol_rel(opt, 1.0e-5);
 
         // bounds
         lb[0] = 0.0;                
@@ -60,10 +61,10 @@ namespace precompute{
         nlopt_set_upper_bounds(opt, ub);
 
         // optimize TODO: fix initial guess
-        // x[0] = Cw_priv[0];
-        // x[1] = Cm_priv[0];
-        x[0] = solver_data->C_tot/3.0;
-        x[1] = solver_data->C_tot/3.0;
+        x[0] = Cw_priv[0];
+        x[1] = Cm_priv[0];
+        // x[0] = solver_data->C_tot/3.0;
+        // x[1] = solver_data->C_tot/3.0;
         nlopt_optimize(opt, x, &minf);          
         nlopt_destroy(opt);                 
         
@@ -172,6 +173,12 @@ namespace precompute{
                 double C_tot = par->grid_Ctot[i];
                 for (int iP=0; iP < par->num_power; iP++){
                     int idx = index::index2(iP,i,par->num_power,par->num_Ctot);         
+
+                    sol->pre_Ctot_Cw_priv[idx] = C_tot/3.0;
+                    sol->pre_Ctot_Cm_priv[idx] = C_tot/3.0;
+                    sol->pre_Ctot_C_pub[idx] = C_tot/3.0;  
+
+                    // NB: in this function the provided Cw_priv and Cm_priv will be used as starting values in the optimizer. Maybe set to something reasonable here.
                     solve_intraperiod_couple(&sol->pre_Ctot_Cw_priv[idx], &sol->pre_Ctot_Cm_priv[idx], &sol->pre_Ctot_C_pub[idx] , C_tot,par->grid_power[iP],par);
                 } // power
             } // Ctot

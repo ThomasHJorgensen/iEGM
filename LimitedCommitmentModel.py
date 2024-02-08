@@ -227,8 +227,8 @@ class HouseholdModelClass(EconModelClass):
 
         # d. pre-compute optimal consumption allocation
         shape_pre = (par.num_power,par.num_Ctot)
-        sol.pre_Ctot_Cw_priv = np.nan + np.ones(shape_pre)      # precomputed optimal allocation of consumption over grid of total C 
-        sol.pre_Ctot_Cm_priv = np.nan + np.ones(shape_pre)
+        sol.pre_Ctot_Cw_priv =  np.ones(shape_pre)      # precomputed optimal allocation of consumption over grid of total C 
+        sol.pre_Ctot_Cm_priv =  np.ones(shape_pre)
         sol.pre_Ctot_C_pub = np.nan + np.ones(shape_pre)
 
         # e. containers for "true" solution - overwritten by self.set_true_EmargV if run
@@ -318,9 +318,8 @@ class HouseholdModelClass(EconModelClass):
         par.grid_Ctot = nonlinspace(1.0e-6,par.max_Ctot,par.num_Ctot,1.1)   
 
         # EGM
-        par.grid_util = np.nan + np.ones((par.num_power,par.num_marg_u))
-        par.grid_marg_u = np.nan + np.ones(par.grid_util.shape)
-        par.grid_marg_u_for_inv = np.nan + np.ones(par.grid_util.shape)
+        par.grid_marg_u = np.nan + np.ones((par.num_power,par.num_marg_u))
+        par.grid_marg_u_for_inv = np.nan + np.ones((par.num_power,par.num_marg_u))
 
         par.grid_C_for_marg_u = nonlinspace(1.0e-6,par.max_Ctot,par.num_marg_u,1.1)
 
