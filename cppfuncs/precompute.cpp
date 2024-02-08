@@ -61,10 +61,11 @@ namespace precompute{
         nlopt_set_upper_bounds(opt, ub);
 
         // optimize TODO: fix initial guess
-        x[0] = Cw_priv[0];
-        x[1] = Cm_priv[0];
-        // x[0] = solver_data->C_tot/3.0;
-        // x[1] = solver_data->C_tot/3.0;
+        // x[0] = Cw_priv[0];
+        // x[1] = Cm_priv[0];
+
+        x[0] = solver_data->C_tot/3.0;
+        x[1] = solver_data->C_tot/3.0;
         nlopt_optimize(opt, x, &minf);          
         nlopt_destroy(opt);                 
         
@@ -176,7 +177,7 @@ namespace precompute{
 
                     sol->pre_Ctot_Cw_priv[idx] = C_tot/3.0;
                     sol->pre_Ctot_Cm_priv[idx] = C_tot/3.0;
-                    sol->pre_Ctot_C_pub[idx] = C_tot/3.0;  
+                    sol->pre_Ctot_C_pub[idx] = C_tot/3.0; 
 
                     // NB: in this function the provided Cw_priv and Cm_priv will be used as starting values in the optimizer. Maybe set to something reasonable here.
                     solve_intraperiod_couple(&sol->pre_Ctot_Cw_priv[idx], &sol->pre_Ctot_Cm_priv[idx], &sol->pre_Ctot_C_pub[idx] , C_tot,par->grid_power[iP],par);
