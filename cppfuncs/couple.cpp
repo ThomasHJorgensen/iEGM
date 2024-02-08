@@ -506,9 +506,11 @@ namespace couple {
                     calc_expected_value_couple(t, iP, iL, sol->Vw_start_as_couple, sol->Vm_start_as_couple, sol->EVw_start_as_couple, sol->EVm_start_as_couple, sol, par);
 
                      // vi. Update marginal value
+                    if (par->do_egm){
                     int idx_interp = index::couple(t,iP,iL,0,par);
-                    calc_marginal_value_couple(t, iP, iL, &sol->Vw_start_as_couple[idx_interp], &sol->Vm_start_as_couple[idx_interp], &sol->margV_start_as_couple[idx_interp], sol, par);
-                    calc_marginal_value_couple(t, iP, iL, &sol->EVw_start_as_couple[idx_interp], &sol->Vm_start_as_couple[idx_interp], &sol->EmargV_start_as_couple[idx_interp], sol, par);
+                        calc_marginal_value_couple(t, iP, iL, &sol->Vw_start_as_couple[idx_interp], &sol->Vm_start_as_couple[idx_interp], &sol->margV_start_as_couple[idx_interp], sol, par);
+                        calc_marginal_value_couple(t, iP, iL, &sol->EVw_start_as_couple[idx_interp], &sol->Vm_start_as_couple[idx_interp], &sol->EmargV_start_as_couple[idx_interp], sol, par);
+                    }
                 } // power in finite diff
             } // love
             
