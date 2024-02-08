@@ -112,8 +112,7 @@ class HouseholdModelClass(EconModelClass):
         par.do_cpp = False
         par.threads = 8
 
-        par.interp_power = False
-        par.centered_gradient = False
+        par.centered_gradient = True
         
     def allocate(self):
         par = self.par
