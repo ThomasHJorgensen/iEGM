@@ -227,8 +227,8 @@ class HouseholdModelClass(EconModelClass):
 
         # d. pre-compute optimal consumption allocation
         shape_pre = (par.num_power,par.num_Ctot)
-        sol.pre_Ctot_Cw_priv =  np.ones(shape_pre)      # precomputed optimal allocation of consumption over grid of total C 
-        sol.pre_Ctot_Cm_priv =  np.ones(shape_pre)
+        sol.pre_Ctot_Cw_priv =  np.nan + np.ones(shape_pre)      # precomputed optimal allocation of consumption over grid of total C 
+        sol.pre_Ctot_Cm_priv = np.nan + np.ones(shape_pre)
         sol.pre_Ctot_C_pub = np.nan + np.ones(shape_pre)
 
         # e. containers for "true" solution - overwritten by self.set_true_EmargV if run

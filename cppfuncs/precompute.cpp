@@ -32,7 +32,7 @@ namespace precompute{
         return - val;
     }
 
-    void solve_intraperiod_couple(double* Cw_priv,double* Cm_priv,double* C_pub , double C_tot,double power,par_struct *par){
+    void solve_intraperiod_couple(double* Cw_priv,double* Cm_priv,double* C_pub , double C_tot,double power,par_struct *par, double start_Cw_priv=-1.0, double start_Cm_priv=-1.0){
         // setup numerical solver
         solver_precompute_struct* solver_data = new solver_precompute_struct;  
                 
@@ -60,12 +60,20 @@ namespace precompute{
         nlopt_set_lower_bounds(opt, lb);
         nlopt_set_upper_bounds(opt, ub);
 
-        // optimize TODO: fix initial guess
+        // // optimize TODO: fix initial guess
+        if (start_Cm_priv<0.0){
+            start_Cm_priv = C_tot/3.0;
+        }
+        if (start_Cw_priv<0.0){
+            start_Cw_priv = C_tot/3.0;
+        }
+        x[0] = start_Cw_priv;
+        x[1] = start_Cm_priv;
         // x[0] = Cw_priv[0];
         // x[1] = Cm_priv[0];
 
-        x[0] = solver_data->C_tot/3.0;
-        x[1] = solver_data->C_tot/3.0;
+        // x[0] = solver_data->C_tot/3.0;
+        // x[1] = solver_data->C_tot/3.0;
         nlopt_optimize(opt, x, &minf);          
         nlopt_destroy(opt);                 
         
@@ -121,11 +129,18 @@ namespace precompute{
     }
 
 
-    double util_C_couple(double C_tot, double power, int iL, par_struct* par, double* Cw_priv, double* Cm_priv){
+    double util_C_couple(double C_tot, double power, int iL, par_struct* par, double* Cw_priv, double* Cm_priv, double start_Cw_priv = -1.0, double start_Cm_priv = -1.0){
         double love = par->grid_love[iL];
         double C_pub = 0.0;
 
-        solve_intraperiod_couple(Cw_priv, Cm_priv, &C_pub , C_tot,power,par); // this will update Cw_priv, Cm_priv, C_pub
+        if (start_Cm_priv<0.0){
+            start_Cm_priv = C_tot/3.0;
+        }
+        if (start_Cw_priv<0.0){
+            start_Cw_priv = C_tot/3.0;
+        }
+
+        solve_intraperiod_couple(Cw_priv, Cm_priv, &C_pub , C_tot,power,par, start_Cw_priv, start_Cm_priv); // this will update Cw_priv, Cm_priv, C_pub
 
         return utils::util_couple(*Cw_priv,*Cm_priv,C_pub,power,iL,par);
     }
@@ -139,11 +154,15 @@ namespace precompute{
         double Cm_priv = C_tot/3.0;
         double util = util_C_couple(C_tot,power,iL,par, &Cw_priv,&Cm_priv); // this will update Cw_priv, Cm_priv
 
+        // compute allocation
+        double Cw_share = 1/3.0; //Cw_priv/C_tot;
+        double Cm_share = 1/3.0; //Cm_priv/C_tot;
+
         // forward difference
         double delta = 0.0001;
-        Cw_priv = C_tot/3.0; // could be smarter about this. Would require initialization in the precomute below.
-        Cm_priv = C_tot/3.0;
-        double util_delta = util_C_couple(C_tot + delta,power,iL,par, &Cw_priv,&Cm_priv);
+        double start_Cw_priv = (C_tot+delta)*Cw_share; 
+        double start_Cm_priv = (C_tot+delta)*Cm_share; 
+        double util_delta = util_C_couple(C_tot + delta,power,iL,par, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv);
 
         // return marginal utility
         return (util_delta - util)/delta;
@@ -175,12 +194,14 @@ namespace precompute{
                 for (int iP=0; iP < par->num_power; iP++){
                     int idx = index::index2(iP,i,par->num_power,par->num_Ctot);         
 
-                    sol->pre_Ctot_Cw_priv[idx] = C_tot/3.0;
-                    sol->pre_Ctot_Cm_priv[idx] = C_tot/3.0;
-                    sol->pre_Ctot_C_pub[idx] = C_tot/3.0; 
+                    // sol->pre_Ctot_Cw_priv[idx] = C_tot/3.0;
+                    // sol->pre_Ctot_Cm_priv[idx] = C_tot/3.0;
+                    // sol->pre_Ctot_C_pub[idx] = C_tot/3.0; 
 
                     // NB: in this function the provided Cw_priv and Cm_priv will be used as starting values in the optimizer. Maybe set to something reasonable here.
-                    solve_intraperiod_couple(&sol->pre_Ctot_Cw_priv[idx], &sol->pre_Ctot_Cm_priv[idx], &sol->pre_Ctot_C_pub[idx] , C_tot,par->grid_power[iP],par);
+                    double start_Cm_priv = C_tot/3.0;
+                    double start_Cw_priv = C_tot/3.0;
+                    solve_intraperiod_couple(&sol->pre_Ctot_Cw_priv[idx], &sol->pre_Ctot_Cm_priv[idx], &sol->pre_Ctot_C_pub[idx] , C_tot,par->grid_power[iP],par, start_Cw_priv, start_Cm_priv);
                 } // power
             } // Ctot
         
