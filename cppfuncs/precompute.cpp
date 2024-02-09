@@ -22,6 +22,18 @@ namespace precompute{
 
         double Cw_priv = x[0];  
         double Cm_priv = x[1];
+
+        // clip and penalty
+        double penalty = 0.0;
+        if(Cw_priv < 1.0e-6){
+            penalty += 1000.0*(Cw_priv*Cw_priv);
+            Cw_priv = 1.0e-6;
+        }
+        if(Cm_priv < 1.0e-6){
+            penalty += 1000.0*(Cm_priv*Cm_priv);
+            Cm_priv = 1.0e-6;
+        }
+
         double C_pub = C_tot - Cw_priv - Cm_priv;
 
         // weighted utility of choice
@@ -29,7 +41,7 @@ namespace precompute{
         double val = power*utils::util(Cw_priv,C_pub,woman,par,love) + (1.0-power)*utils::util(Cm_priv,C_pub,man,par,love);
 
         // return negative of value
-        return - val;
+        return - val + penalty;
     }
 
     void solve_intraperiod_couple(double* Cw_priv,double* Cm_priv,double* C_pub , double C_tot,double power,par_struct *par, double start_Cw_priv=-1.0, double start_Cm_priv=-1.0){
@@ -53,34 +65,42 @@ namespace precompute{
         nlopt_set_xtol_rel(opt, 1.0e-5);
 
         // bounds
-        lb[0] = 0.0;                
-        lb[1] = 0.0;
+        lb[0] = 1.0e-6;                
+        lb[1] = 1.0e-6;
         ub[0] = solver_data->C_tot;
         ub[1] = solver_data->C_tot;
-        nlopt_set_lower_bounds(opt, lb);
-        nlopt_set_upper_bounds(opt, ub);
 
-        // // optimize TODO: fix initial guess
-        if (start_Cm_priv<0.0){
-            start_Cm_priv = C_tot/3.0;
-        }
-        if (start_Cw_priv<0.0){
-            start_Cw_priv = C_tot/3.0;
-        }
-        x[0] = start_Cw_priv;
-        x[1] = start_Cm_priv;
-        // x[0] = Cw_priv[0];
-        // x[1] = Cm_priv[0];
+        if (lb[0] > ub[0]){
+            Cw_priv[0] = ub[0]*0.33;
+            Cm_priv[0] = ub[1]*0.33;
+            C_pub[0] = C_tot - Cw_priv[0] - Cm_priv[0];
 
-        // x[0] = solver_data->C_tot/3.0;
-        // x[1] = solver_data->C_tot/3.0;
-        nlopt_optimize(opt, x, &minf);          
-        nlopt_destroy(opt);                 
-        
-        // unpack
-        Cw_priv[0] = x[0];
-        Cm_priv[0] = x[1];
-        C_pub[0] = C_tot - Cw_priv[0] - Cm_priv[0];
+        } else {
+            nlopt_set_lower_bounds(opt, lb);
+            nlopt_set_upper_bounds(opt, ub);
+
+            // // optimize TODO: fix initial guess
+            if (start_Cm_priv<0.0){
+                start_Cm_priv = C_tot/3.0;
+            }
+            if (start_Cw_priv<0.0){
+                start_Cw_priv = C_tot/3.0;
+            }
+            x[0] = start_Cw_priv;
+            x[1] = start_Cm_priv;
+            // x[0] = Cw_priv[0];
+            // x[1] = Cm_priv[0];
+
+            // x[0] = solver_data->C_tot/3.0;
+            // x[1] = solver_data->C_tot/3.0;
+            nlopt_optimize(opt, x, &minf);          
+            nlopt_destroy(opt);                 
+            
+            // unpack
+            Cw_priv[0] = x[0];
+            Cm_priv[0] = x[1];
+            C_pub[0] = C_tot - Cw_priv[0] - Cm_priv[0];
+        }
 
     }
 
