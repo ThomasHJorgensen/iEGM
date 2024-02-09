@@ -25,11 +25,11 @@ namespace precompute{
 
         // clip and penalty
         double penalty = 0.0;
-        if(Cw_priv < 1.0e-6){
+        if(Cw_priv < 1.0e-8){
             penalty += 1000.0*(Cw_priv*Cw_priv);
             Cw_priv = 1.0e-6;
         }
-        if(Cm_priv < 1.0e-6){
+        if(Cm_priv < 1.0e-8){
             penalty += 1000.0*(Cm_priv*Cm_priv);
             Cm_priv = 1.0e-6;
         }
@@ -44,7 +44,7 @@ namespace precompute{
         return - val + penalty;
     }
 
-    void solve_intraperiod_couple(double* Cw_priv,double* Cm_priv,double* C_pub , double C_tot,double power,par_struct *par, double start_Cw_priv=-1.0, double start_Cm_priv=-1.0){
+    void solve_intraperiod_couple(double* Cw_priv,double* Cm_priv,double* C_pub , double C_tot,double power,par_struct *par, double start_Cw_priv, double start_Cm_priv){
         // setup numerical solver
         solver_precompute_struct* solver_data = new solver_precompute_struct;  
                 
@@ -61,8 +61,8 @@ namespace precompute{
         solver_data->par = par;
         nlopt_set_min_objective(opt, objfunc_precompute, solver_data);   
         nlopt_set_maxeval(opt, 2000);
-        nlopt_set_ftol_rel(opt, 1.0e-6);
-        nlopt_set_xtol_rel(opt, 1.0e-5);
+        // nlopt_set_ftol_rel(opt, 1.0e-6);
+        // nlopt_set_xtol_rel(opt, 1.0e-5);
 
         // bounds
         lb[0] = 1.0e-6;                
@@ -70,7 +70,8 @@ namespace precompute{
         ub[0] = solver_data->C_tot;
         ub[1] = solver_data->C_tot;
 
-        if (lb[0] > ub[0]){
+        if (lb[0] >= ub[0]){
+            
             Cw_priv[0] = ub[0]*0.33;
             Cm_priv[0] = ub[1]*0.33;
             C_pub[0] = C_tot - Cw_priv[0] - Cm_priv[0];
@@ -79,20 +80,9 @@ namespace precompute{
             nlopt_set_lower_bounds(opt, lb);
             nlopt_set_upper_bounds(opt, ub);
 
-            // // optimize TODO: fix initial guess
-            if (start_Cm_priv<0.0){
-                start_Cm_priv = C_tot/3.0;
-            }
-            if (start_Cw_priv<0.0){
-                start_Cw_priv = C_tot/3.0;
-            }
             x[0] = start_Cw_priv;
             x[1] = start_Cm_priv;
-            // x[0] = Cw_priv[0];
-            // x[1] = Cm_priv[0];
 
-            // x[0] = solver_data->C_tot/3.0;
-            // x[1] = solver_data->C_tot/3.0;
             nlopt_optimize(opt, x, &minf);          
             nlopt_destroy(opt);                 
             
@@ -122,7 +112,6 @@ namespace precompute{
 
 
     void precompute_margu_single(int i, int gender, par_struct* par){
-        // TODO:; think about re-using stuff
         double* grid_marg_u_single = par->grid_marg_u_single_w;
         double* grid_marg_u_single_for_inv = par->grid_marg_u_single_w_for_inv;
         if (gender==man){
@@ -132,7 +121,6 @@ namespace precompute{
 
         // calculate marginal utility and inverse marginal utility for EGM
         // utility at current allocation
-
         if (par->analytic_marg_u_single){
             grid_marg_u_single[i] = utils::marg_util_C(par->grid_C_for_marg_u[i], gender, par);
 
@@ -149,42 +137,28 @@ namespace precompute{
     }
 
 
-    double util_C_couple(double C_tot, double power, int iL, par_struct* par, double* Cw_priv, double* Cm_priv, double start_Cw_priv = -1.0, double start_Cm_priv = -1.0){
+    double util_C_couple(double C_tot, double power, int iL, par_struct* par, double* Cw_priv, double* Cm_priv, double start_Cw_priv, double start_Cm_priv){
         double love = par->grid_love[iL];
         double C_pub = 0.0;
-
-        if (start_Cm_priv<0.0){
-            start_Cm_priv = C_tot/3.0;
-        }
-        if (start_Cw_priv<0.0){
-            start_Cw_priv = C_tot/3.0;
-        }
-
         solve_intraperiod_couple(Cw_priv, Cm_priv, &C_pub , C_tot,power,par, start_Cw_priv, start_Cm_priv); // this will update Cw_priv, Cm_priv, C_pub
 
         return utils::util_couple(*Cw_priv,*Cm_priv,C_pub,power,iL,par);
     }
 
-    double marg_util_C_couple(double C_tot, double power, par_struct* par){
+    double marg_util_C_couple(double C_tot, double power, par_struct* par, double start_Cw_priv, double start_Cm_priv){
         // baseline utility (could be passed as argument to avoid recomputation of utility at C_tot)
         int iL = 0; // does not matter for the marginal utility   
 
-        // TODO: starting values not in effect now. Not working for some reason
-        double Cw_priv = C_tot/3.0; // could be smarter about this. Would require initialization in the precomute below.
-        double Cm_priv = C_tot/3.0;
-        double util = util_C_couple(C_tot,power,iL,par, &Cw_priv,&Cm_priv); // this will update Cw_priv, Cm_priv
+        double Cw_priv = 0.0; 
+        double Cm_priv = 0.0;
 
-        // compute allocation
-        double Cw_share = 1/3.0; //Cw_priv/C_tot;
-        double Cm_share = 1/3.0; //Cm_priv/C_tot;
+        double util = util_C_couple(C_tot,power,iL,par, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv); // this will update Cw_priv, Cm_priv
 
         // forward difference
         double delta = 0.0001;
-        double start_Cw_priv = (C_tot+delta)*Cw_share; 
-        double start_Cm_priv = (C_tot+delta)*Cm_share; 
-        double util_delta = util_C_couple(C_tot + delta,power,iL,par, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv);
-
-        // return marginal utility
+        start_Cw_priv = Cw_priv; //updated with previous solution 
+        start_Cm_priv = Cm_priv; 
+        double util_delta = util_C_couple(C_tot + delta,power,iL,par, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv); 
         return (util_delta - util)/delta;
     }
 
@@ -196,7 +170,10 @@ namespace precompute{
         double power = par->grid_power[iP];
 
         // calculate marginal utility and inverse marginal utility for EGM
-        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,power,par);
+        double start_Cw_priv = C_tot/3.0;
+        double start_Cm_priv = C_tot/3.0;
+
+        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,power,par, start_Cw_priv, start_Cm_priv);
 
         int idx_flip = index::index2(iP,par->num_marg_u-1 - i,par->num_power,par->num_marg_u);
         par->grid_marg_u_for_inv[idx_flip] = par->grid_marg_u[idx];
@@ -214,13 +191,13 @@ namespace precompute{
                 for (int iP=0; iP < par->num_power; iP++){
                     int idx = index::index2(iP,i,par->num_power,par->num_Ctot);         
 
-                    // sol->pre_Ctot_Cw_priv[idx] = C_tot/3.0;
-                    // sol->pre_Ctot_Cm_priv[idx] = C_tot/3.0;
-                    // sol->pre_Ctot_C_pub[idx] = C_tot/3.0; 
-
-                    // NB: in this function the provided Cw_priv and Cm_priv will be used as starting values in the optimizer. Maybe set to something reasonable here.
                     double start_Cm_priv = C_tot/3.0;
                     double start_Cw_priv = C_tot/3.0;
+                    if (iP>0){
+                        int idx_minus = index::index2(iP-1,i,par->num_power,par->num_Ctot);
+                        start_Cm_priv = sol->pre_Ctot_Cm_priv[idx_minus];
+                        start_Cw_priv = sol->pre_Ctot_Cw_priv[idx_minus];
+                    }
                     solve_intraperiod_couple(&sol->pre_Ctot_Cw_priv[idx], &sol->pre_Ctot_Cm_priv[idx], &sol->pre_Ctot_C_pub[idx] , C_tot,par->grid_power[iP],par, start_Cw_priv, start_Cm_priv);
                 } // power
             } // Ctot
@@ -266,7 +243,9 @@ namespace precompute{
         }
 
         // return squared difference
-        double diff = marg_util_C_couple(C_tot,power,par) - margU;
+        double start_Cw_priv = C_tot/3.0;
+        double start_Cm_priv = C_tot/3.0;
+        double diff = marg_util_C_couple(C_tot,power,par, start_Cw_priv, start_Cm_priv) - margU;
 
         if (do_print){
             logs::write("inverse_log.txt",1,"C_tot: %f, diff: %f, penalty: %f\n",C_tot,diff,penalty);
