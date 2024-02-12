@@ -83,6 +83,7 @@ class HouseholdModelClass(EconModelClass):
         # pre-computation
         par.interp_inverse = False # True: interpolate inverse consumption
         par.interp_method = 'linear'
+        par.interp_intra_period_in_num_inverse = False #if True, intra-period allocation is interpolated when solving using numerical inverse. If False, the intra-period problem is solved using optimizer
 
         par.num_Ctot = 100
         par.max_Ctot = par.max_A*2

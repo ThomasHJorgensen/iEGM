@@ -371,8 +371,8 @@ namespace sim {
                             }
 
                             double C_tot = sim->C_tot[it];
-                            if (A>1e-6){ //left as nan if budget constraint binds
-                                sim->euler[it] = C_tot - precompute::inv_marg_util_couple(Emarg_next, power, par, C_tot);
+                            if (A>1e-2){ //left as nan if budget constraint binds
+                                sim->euler[it] = C_tot - precompute::inv_marg_util_couple(Emarg_next, power, par, sol, C_tot);
                             }
 
                         } else { //single 
@@ -389,7 +389,7 @@ namespace sim {
                        
                             double Cw_tot = sim->Cw_tot[it];
                             
-                            if (Aw>1e-6){//left as nan if budget constraint binds
+                            if (Aw>1e-2){//left as nan if budget constraint binds
                                 sim->euler[it] = Cw_tot - utils::inv_marg_util_C(Emarg_next,woman,par); //analytical version 
                                 // sim->euler[it] = Cw_tot -  precompute::inv_marg_util_single(Emarg_next, woman, par, C_tot); //numerical version
                             }

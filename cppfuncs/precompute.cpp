@@ -137,28 +137,37 @@ namespace precompute{
     }
 
 
-    double util_C_couple(double C_tot, double power, int iL, par_struct* par, double* Cw_priv, double* Cm_priv, double start_Cw_priv, double start_Cm_priv){
+    EXPORT double util_C_couple(double C_tot, double power, int iL, par_struct* par, sol_struct* sol, double* Cw_priv, double* Cm_priv, double start_Cw_priv, double start_Cm_priv, bool do_interpolate = false){
         double love = par->grid_love[iL];
         double C_pub = 0.0;
-        solve_intraperiod_couple(Cw_priv, Cm_priv, &C_pub , C_tot,power,par, start_Cw_priv, start_Cm_priv); // this will update Cw_priv, Cm_priv, C_pub
+        if (do_interpolate){
 
+            int iP = tools::binary_search(0,par->num_power,par->grid_power,power);
+            int iC = tools::binary_search(0,par->num_Ctot,par->grid_Ctot,C_tot);
+            Cw_priv[0] = tools::_interp_2d(par->grid_power, par->grid_Ctot,par->num_power,par->num_Ctot,sol->pre_Ctot_Cw_priv,power,C_tot, iP, iC);
+            Cm_priv[0] = tools::_interp_2d(par->grid_power, par->grid_Ctot, par->num_power,par->num_Ctot,sol->pre_Ctot_Cm_priv,power,C_tot, iP, iC);
+            C_pub = C_tot - Cw_priv[0] - Cm_priv[0];
+        }
+        else{
+            solve_intraperiod_couple(Cw_priv, Cm_priv, &C_pub , C_tot,power,par, start_Cw_priv, start_Cm_priv); // this will update Cw_priv, Cm_priv, C_pub
+        }
         return utils::util_couple(*Cw_priv,*Cm_priv,C_pub,power,iL,par);
     }
 
-    double marg_util_C_couple(double C_tot, double power, par_struct* par, double start_Cw_priv, double start_Cm_priv){
+    EXPORT double marg_util_C_couple(double C_tot, double power, par_struct* par, sol_struct* sol, double start_Cw_priv, double start_Cm_priv, bool do_interpolate=false){
         // baseline utility (could be passed as argument to avoid recomputation of utility at C_tot)
         int iL = 0; // does not matter for the marginal utility   
 
         double Cw_priv = 0.0; 
         double Cm_priv = 0.0;
 
-        double util = util_C_couple(C_tot,power,iL,par, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv); // this will update Cw_priv, Cm_priv
+        double util = util_C_couple(C_tot,power,iL, par, sol, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv, do_interpolate); // this will update Cw_priv, Cm_priv
 
         // forward difference
         double delta = 0.0001;
         start_Cw_priv = Cw_priv; //updated with previous solution 
         start_Cm_priv = Cm_priv; 
-        double util_delta = util_C_couple(C_tot + delta,power,iL,par, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv); 
+        double util_delta = util_C_couple(C_tot + delta,power,iL,par,sol, &Cw_priv,&Cm_priv, start_Cw_priv, start_Cm_priv, do_interpolate); 
         return (util_delta - util)/delta;
     }
 
@@ -173,7 +182,7 @@ namespace precompute{
         double start_Cw_priv = C_tot/3.0;
         double start_Cm_priv = C_tot/3.0;
 
-        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,power,par, start_Cw_priv, start_Cm_priv);
+        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,power,par, sol, start_Cw_priv, start_Cm_priv);
 
         int idx_flip = index::index2(iP,par->num_marg_u-1 - i,par->num_power,par->num_marg_u);
         par->grid_marg_u_for_inv[idx_flip] = par->grid_marg_u[idx];
@@ -222,7 +231,9 @@ namespace precompute{
         double power;
         int gender;
         par_struct *par;
+        sol_struct *sol;
         bool do_print;
+        bool do_interpolate;
     } solver_inv_struct;
 
     double obj_inv_marg_util_couple(unsigned n, const double *x, double *grad, void *solver_data_in){
@@ -233,7 +244,9 @@ namespace precompute{
         double margU = solver_data->margU;
         double power = solver_data->power;
         bool do_print = solver_data->do_print;
+        bool do_interpolate = solver_data->do_interpolate;
         par_struct *par = solver_data->par;
+        sol_struct *sol = solver_data->sol;
 
         // clip
         double penalty = 0.0;
@@ -245,7 +258,7 @@ namespace precompute{
         // return squared difference
         double start_Cw_priv = C_tot/3.0;
         double start_Cm_priv = C_tot/3.0;
-        double diff = marg_util_C_couple(C_tot,power,par, start_Cw_priv, start_Cm_priv) - margU;
+        double diff = marg_util_C_couple(C_tot,power,par,sol, start_Cw_priv, start_Cm_priv, do_interpolate) - margU;
 
         if (do_print){
             logs::write("inverse_log.txt",1,"C_tot: %f, diff: %f, penalty: %f\n",C_tot,diff,penalty);
@@ -254,7 +267,7 @@ namespace precompute{
 
     }
 
-    EXPORT double inv_marg_util_couple(double margU, double power,par_struct* par, double guess = 3.0, bool do_print=false){
+    EXPORT double inv_marg_util_couple(double margU, double power,par_struct* par, sol_struct* sol, double guess = 3.0, bool do_interpolate=false,bool do_print=false ){
         // setup numerical solver
         solver_inv_struct* solver_data = new solver_inv_struct;  
                 
@@ -269,7 +282,9 @@ namespace precompute{
         solver_data->margU = margU;         
         solver_data->power = power;
         solver_data->par = par;
-        solver_data->do_print = do_print;        
+        solver_data->sol = sol;
+        solver_data->do_print = do_print;      
+        solver_data->do_interpolate = do_interpolate;  
 
         if (do_print){
             logs::write("inverse_log.txt",0,"margU: %f\n",margU);
