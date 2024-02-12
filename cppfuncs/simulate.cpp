@@ -352,7 +352,7 @@ namespace sim {
 
                     // Euler Errors
                     if (t<par->simT-1){ //no euler error in last period
-                        if (sim->couple[it]){
+                        if (sim->couple[it]){ //couple
                             double A = sim->A[it];
                             double love = sim->love[it];
                             double power = sim->power[it];
@@ -371,14 +371,12 @@ namespace sim {
                             }
 
                             double C_tot = sim->C_tot[it];
-                            sim->euler[it] = C_tot - precompute::inv_marg_util_couple(Emarg_next, power, par, C_tot);
+                            if (A>1e-6){ //left as nan if budget constraint binds
+                                sim->euler[it] = C_tot - precompute::inv_marg_util_couple(Emarg_next, power, par, C_tot);
+                            }
 
-                        } else {
-                            // expected marginal utility, as in solution: also over re-partnering
-                            
+                        } else { //single 
                             double Aw = sim->Aw[it];
-                            
-                            // TODO: get from "true" solution 
                             double Emarg_next = 0;
                             if (par->use_external_solution) {
                                 int idx_interp = index::index2(t+1,0,par->T,par->num_A_true);
@@ -390,8 +388,12 @@ namespace sim {
                             }
                        
                             double Cw_tot = sim->Cw_tot[it];
-                            // sim->euler[it] = Cw_tot -  precompute::inv_marg_util_single(Emarg_next, woman, par, C_tot); //numerical version
-                            sim->euler[it] = Cw_tot - utils::inv_marg_util_C(Emarg_next,woman,par); //analytical version
+                            
+                            if (Aw>1e-6){//left as nan if budget constraint binds
+                                sim->euler[it] = Cw_tot - utils::inv_marg_util_C(Emarg_next,woman,par); //analytical version 
+                                // sim->euler[it] = Cw_tot -  precompute::inv_marg_util_single(Emarg_next, woman, par, C_tot); //numerical version
+                            }
+                            
                         }
                     }
 
