@@ -378,15 +378,15 @@ namespace sim {
 
                         } else { //single 
                             double Aw = sim->Aw[it];
-                            double Aw_lag = sim->Aw[it_1];
+                            // double Aw_lag = sim->Aw[it_1];
                             double Emarg_next = 0;
                             if (par->use_external_solution) {
                                 int idx_interp = index::index2(t+1,0,par->T,par->num_A_true);
-                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw_true, par->num_A_true, &sol->EmargVw_start_as_single_true[idx_interp], Aw_lag);
+                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw_true, par->num_A_true, &sol->EmargVw_start_as_single_true[idx_interp], Aw);
                             }
                             else {
                                 int idx_interp = index::single(t+1,0,par);
-                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw, par->num_A, &sol->EmargVw_start_as_single[idx_interp], Aw_lag);
+                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw, par->num_A, &sol->EmargVw_start_as_single[idx_interp], Aw);
                             }
                        
                             double Cw_tot = sim->Cw_tot[it];
