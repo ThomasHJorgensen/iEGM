@@ -41,9 +41,9 @@ EXPORT void compute_margEV(sol_struct* sol, par_struct* par){
         for (int iP=0; iP<par->num_power; iP++){
             for (int iL=0; iL<par->num_love; iL++){
                 int idx = index::couple(t,iP,iL,0,par);
-                double* Vw = &sol->Vw_start_as_couple[idx];
-                double* Vm = &sol->Vm_start_as_couple[idx];
-                double* margV = &sol->margV_start_as_couple[idx];
+                double* Vw = &sol->EVw_start_as_couple[idx];
+                double* Vm = &sol->EVm_start_as_couple[idx];
+                double* margV = &sol->EmargV_start_as_couple[idx];
                 couple::calc_marginal_value_couple(t, iP, iL, Vw, Vm, margV, sol, par);
             }
         }

@@ -273,8 +273,11 @@ namespace sim {
                         } else {
                             sim->couple[it] = true;
                             power = par->grid_power[iP];
+                            sim->A_own[it_1] = Aw_lag;
+                            sim->A_partner[it_1] = Ap;
                             A_lag = Aw_lag + Ap;
                             love = par->grid_love[iL];
+                            sim->love[it] = love;
                         }
                     }
 
@@ -352,22 +355,20 @@ namespace sim {
 
                     // Euler Errors
                     if (t<par->simT-1){ //no euler error in last period
+
                         if (sim->couple[it]){ //couple
                             double A = sim->A[it];
-                            double love = sim->love[it];
                             double power = sim->power[it];
-
-                            
                             double Emarg_next = 0;
 
                             // TODO: get from "true" solution 
                             if (par->use_external_solution) {
                                 int idx_interp = index::index4(t+1,0,0,0,par->T, par->num_power_true, par->num_love_true, par->num_A_true);
-                                Emarg_next = par->beta*tools::interp_3d(par->grid_power_true, par->grid_love_true, par->grid_A_true, par->num_power_true, par->num_love_true, par->num_A_true, &sol->EmargV_start_as_couple_true[idx_interp], power, love, A);
+                                Emarg_next = par->beta*tools::interp_3d(par->grid_power_true, par->grid_love_true, par->grid_A_true, par->num_power_true, par->num_love_true, par->num_A_true, &sol->EmargV_start_as_couple_true[idx_interp], power, love, A_lag);
                             }
                             else {
                                 int idx_interp = index::couple(t+1,0,0,0,par);
-                                Emarg_next = par->beta*tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->EmargV_start_as_couple[idx_interp], power, love, A);
+                                Emarg_next = par->beta*tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->EmargV_start_as_couple[idx_interp], power, love, A_lag);
                             }
 
                             double C_tot = sim->C_tot[it];
@@ -377,14 +378,15 @@ namespace sim {
 
                         } else { //single 
                             double Aw = sim->Aw[it];
+                            double Aw_lag = sim->Aw[it_1];
                             double Emarg_next = 0;
                             if (par->use_external_solution) {
                                 int idx_interp = index::index2(t+1,0,par->T,par->num_A_true);
-                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw_true, par->num_A_true, &sol->EmargVw_start_as_single_true[idx_interp], Aw);
+                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw_true, par->num_A_true, &sol->EmargVw_start_as_single_true[idx_interp], Aw_lag);
                             }
                             else {
                                 int idx_interp = index::single(t+1,0,par);
-                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw, par->num_A, &sol->EmargVw_start_as_single[idx_interp], Aw);
+                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw, par->num_A, &sol->EmargVw_start_as_single[idx_interp], Aw_lag);
                             }
                        
                             double Cw_tot = sim->Cw_tot[it];
