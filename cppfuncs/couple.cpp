@@ -412,14 +412,14 @@ namespace couple {
                 double *EVw_next = nullptr;  
                 double *EVm_next = nullptr;
                 double *EmargV_next = nullptr;
-                if (t<(par->T-1)){
-                    int idx_next = index::couple(t+1,iP,0,0,par);
-                    EVw_next = &sol->EVw_start_as_couple[idx_next];  
-                    EVm_next = &sol->EVm_start_as_couple[idx_next];
-                    EmargV_next = &sol->EmargV_start_as_couple[idx_next];
-                }
                 // solve
                 for (int iL=0; iL<par->num_love; iL++){
+                    if (t<(par->T-1)){
+                        int idx_next = index::couple(t+1,iP,iL,0,par);
+                        EVw_next = &sol->EVw_start_as_couple[idx_next];  
+                        EVm_next = &sol->EVm_start_as_couple[idx_next];
+                        EmargV_next = &sol->EmargV_start_as_couple[idx_next];
+                    }
 
                     if (par->do_egm){
                         solve_couple_to_couple_Agrid_egm(t,iP,iL,EVw_next,EVm_next, EmargV_next,sol,par); 
