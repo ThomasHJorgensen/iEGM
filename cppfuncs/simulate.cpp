@@ -364,11 +364,11 @@ namespace sim {
                             // TODO: get from "true" solution 
                             if (par->use_external_solution) {
                                 int idx_interp = index::index4(t+1,0,0,0,par->T, par->num_power_true, par->num_love_true, par->num_A_true);
-                                Emarg_next = par->beta*tools::interp_3d(par->grid_power_true, par->grid_love_true, par->grid_A_true, par->num_power_true, par->num_love_true, par->num_A_true, &sol->EmargV_start_as_couple_true[idx_interp], power, love, A_lag);
+                                Emarg_next = par->beta*tools::interp_3d(par->grid_power_true, par->grid_love_true, par->grid_A_true, par->num_power_true, par->num_love_true, par->num_A_true, &sol->EmargV_start_as_couple_true[idx_interp], power, love, A);
                             }
                             else {
                                 int idx_interp = index::couple(t+1,0,0,0,par);
-                                Emarg_next = par->beta*tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->EmargV_start_as_couple[idx_interp], power, love, A_lag);
+                                Emarg_next = par->beta*tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->EmargV_start_as_couple[idx_interp], power, love, A);
                             }
 
                             double C_tot = sim->C_tot[it];
