@@ -27,7 +27,7 @@ typedef struct par_struct
  double* prob_partner_A_m;
  bool interp_inverse;
  char* interp_method;
- bool interp_intra_period_in_num_inverse;
+ bool precompute_intratemporal;
  int num_Ctot;
  double max_Ctot;
  bool do_egm;
@@ -45,7 +45,6 @@ typedef struct par_struct
  int num_power_true;
  int num_love_true;
  double max_love_true;
- bool do_cpp;
  int threads;
  bool centered_gradient;
  bool interp_power;
@@ -172,12 +171,11 @@ double* get_double_p_par_struct(par_struct* x, char* name){
 bool get_bool_par_struct(par_struct* x, char* name){
 
  if( strcmp(name,"interp_inverse") == 0 ){ return x->interp_inverse; }
- else if( strcmp(name,"interp_intra_period_in_num_inverse") == 0 ){ return x->interp_intra_period_in_num_inverse; }
+ else if( strcmp(name,"precompute_intratemporal") == 0 ){ return x->precompute_intratemporal; }
  else if( strcmp(name,"do_egm") == 0 ){ return x->do_egm; }
  else if( strcmp(name,"analytic_marg_u_single") == 0 ){ return x->analytic_marg_u_single; }
  else if( strcmp(name,"analytic_inv_marg_u_single") == 0 ){ return x->analytic_inv_marg_u_single; }
  else if( strcmp(name,"use_external_solution") == 0 ){ return x->use_external_solution; }
- else if( strcmp(name,"do_cpp") == 0 ){ return x->do_cpp; }
  else if( strcmp(name,"centered_gradient") == 0 ){ return x->centered_gradient; }
  else if( strcmp(name,"interp_power") == 0 ){ return x->interp_power; }
  else {return false;}

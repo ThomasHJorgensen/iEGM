@@ -54,6 +54,9 @@ typedef struct sol_struct
  double* Vw_start_as_couple;
  double* Vm_start_as_couple;
  double* margV_start_as_couple;
+ double* EVw_start_as_couple;
+ double* EVm_start_as_couple;
+ double* EmargV_start_as_couple;
  double* Cw_priv_start_as_couple;
  double* Cm_priv_start_as_couple;
  double* C_pub_start_as_couple;
@@ -64,6 +67,9 @@ typedef struct sol_struct
  double* pre_Ctot_Cw_priv;
  double* pre_Ctot_Cm_priv;
  double* pre_Ctot_C_pub;
+ double* EmargV_start_as_couple_true;
+ double* EmargVw_start_as_single_true;
+ double* EmargVm_start_as_single_true;
  double* solution_time;
 } sol_struct;
 
@@ -121,6 +127,9 @@ double* get_double_p_sol_struct(sol_struct* x, char* name){
  else if( strcmp(name,"Vw_start_as_couple") == 0 ){ return x->Vw_start_as_couple; }
  else if( strcmp(name,"Vm_start_as_couple") == 0 ){ return x->Vm_start_as_couple; }
  else if( strcmp(name,"margV_start_as_couple") == 0 ){ return x->margV_start_as_couple; }
+ else if( strcmp(name,"EVw_start_as_couple") == 0 ){ return x->EVw_start_as_couple; }
+ else if( strcmp(name,"EVm_start_as_couple") == 0 ){ return x->EVm_start_as_couple; }
+ else if( strcmp(name,"EmargV_start_as_couple") == 0 ){ return x->EmargV_start_as_couple; }
  else if( strcmp(name,"Cw_priv_start_as_couple") == 0 ){ return x->Cw_priv_start_as_couple; }
  else if( strcmp(name,"Cm_priv_start_as_couple") == 0 ){ return x->Cm_priv_start_as_couple; }
  else if( strcmp(name,"C_pub_start_as_couple") == 0 ){ return x->C_pub_start_as_couple; }
@@ -131,6 +140,9 @@ double* get_double_p_sol_struct(sol_struct* x, char* name){
  else if( strcmp(name,"pre_Ctot_Cw_priv") == 0 ){ return x->pre_Ctot_Cw_priv; }
  else if( strcmp(name,"pre_Ctot_Cm_priv") == 0 ){ return x->pre_Ctot_Cm_priv; }
  else if( strcmp(name,"pre_Ctot_C_pub") == 0 ){ return x->pre_Ctot_C_pub; }
+ else if( strcmp(name,"EmargV_start_as_couple_true") == 0 ){ return x->EmargV_start_as_couple_true; }
+ else if( strcmp(name,"EmargVw_start_as_single_true") == 0 ){ return x->EmargVw_start_as_single_true; }
+ else if( strcmp(name,"EmargVm_start_as_single_true") == 0 ){ return x->EmargVm_start_as_single_true; }
  else if( strcmp(name,"solution_time") == 0 ){ return x->solution_time; }
  else {return NULL;}
 

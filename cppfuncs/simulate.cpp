@@ -353,51 +353,12 @@ namespace sim {
 
                     }
 
-                    // Euler Errors
-                    if (t<par->simT-1){ //no euler error in last period
-
-                        if (sim->couple[it]){ //couple
-                            double A = sim->A[it];
-                            double power = sim->power[it];
-                            double Emarg_next = 0;
-
-                            // TODO: get from "true" solution 
-                            if (par->use_external_solution) {
-                                int idx_interp = index::index4(t+1,0,0,0,par->T, par->num_power_true, par->num_love_true, par->num_A_true);
-                                Emarg_next = par->beta*tools::interp_3d(par->grid_power_true, par->grid_love_true, par->grid_A_true, par->num_power_true, par->num_love_true, par->num_A_true, &sol->EmargV_start_as_couple_true[idx_interp], power, love, A);
-                            }
-                            else {
-                                int idx_interp = index::couple(t+1,0,0,0,par);
-                                Emarg_next = par->beta*tools::interp_3d(par->grid_power, par->grid_love, par->grid_A, par->num_power, par->num_love, par->num_A, &sol->EmargV_start_as_couple[idx_interp], power, love, A);
-                            }
-
-                            double C_tot = sim->C_tot[it];
-                            if (A>1e-2){ //left as nan if budget constraint binds
-                                sim->euler[it] = C_tot - precompute::inv_marg_util_couple(Emarg_next, power, par, sol, C_tot);
-                            }
-
-                        } else { //single 
-                            double Aw = sim->Aw[it];
-                            // double Aw_lag = sim->Aw[it_1];
-                            double Emarg_next = 0;
-                            if (par->use_external_solution) {
-                                int idx_interp = index::index2(t+1,0,par->T,par->num_A_true);
-                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw_true, par->num_A_true, &sol->EmargVw_start_as_single_true[idx_interp], Aw);
-                            }
-                            else {
-                                int idx_interp = index::single(t+1,0,par);
-                                Emarg_next = par->beta*tools::interp_1d(par->grid_Aw, par->num_A, &sol->EmargVw_start_as_single[idx_interp], Aw);
-                            }
-                       
-                            double Cw_tot = sim->Cw_tot[it];
-                            
-                            if (Aw>1e-2){//left as nan if budget constraint binds
-                                sim->euler[it] = Cw_tot - utils::inv_marg_util_C(Emarg_next,woman,par); //analytical version 
-                                // sim->euler[it] = Cw_tot -  precompute::inv_marg_util_single(Emarg_next, woman, par, C_tot); //numerical version
-                            }
-                            
-                        }
+                    // utility of women
+                    double love_now = 0.0;
+                    if (sim->couple[it]){
+                        love_now = sim->love[it];
                     }
+                    sim->util[it] = pow(par->beta , t) * utils::util(sim->Cw_priv[it],sim->Cw_pub[it],woman,par,love_now);
 
                 } // t
             } // i

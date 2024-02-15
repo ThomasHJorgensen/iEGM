@@ -173,6 +173,8 @@ namespace precompute{
 
     void precompute_margu_couple(int i, int iP, par_struct *par, sol_struct *sol){
         
+        bool do_interpolate = false;
+
         double C_tot = par->grid_C_for_marg_u[i];
         int idx = index::index2(iP,i,par->num_power,par->num_marg_u);   
 
@@ -182,7 +184,7 @@ namespace precompute{
         double start_Cw_priv = C_tot/3.0;
         double start_Cm_priv = C_tot/3.0;
 
-        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,power,par, sol, start_Cw_priv, start_Cm_priv);
+        par->grid_marg_u[idx] = marg_util_C_couple(C_tot,power,par, sol, start_Cw_priv, start_Cm_priv, do_interpolate);
 
         int idx_flip = index::index2(iP,par->num_marg_u-1 - i,par->num_power,par->num_marg_u);
         par->grid_marg_u_for_inv[idx_flip] = par->grid_marg_u[idx];

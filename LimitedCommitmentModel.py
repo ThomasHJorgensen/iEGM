@@ -83,7 +83,7 @@ class HouseholdModelClass(EconModelClass):
         # pre-computation
         par.interp_inverse = False # True: interpolate inverse consumption
         par.interp_method = 'linear'
-        par.interp_intra_period_in_num_inverse = False #if True, intra-period allocation is interpolated when solving using numerical inverse. If False, the intra-period problem is solved using optimizer
+        par.precompute_intratemporal = True # if True, precompute intratemporal allocation, else re-solve every time
 
         par.num_Ctot = 100
         par.max_Ctot = par.max_A*2
@@ -110,7 +110,6 @@ class HouseholdModelClass(EconModelClass):
         par.max_love_true = 1.0
 
         # cpp
-        par.do_cpp = False
         par.threads = 8
 
         par.centered_gradient = True
@@ -258,22 +257,15 @@ class HouseholdModelClass(EconModelClass):
         sim.love = np.nan + np.ones(shape_sim)
 
         # euler errors
-        sim.euler = np.nan + np.ones((par.simN, par.simT))
-        sim.mean_log10_euler = np.array([np.nan])
+        sim.util = np.nan + np.ones((par.simN, par.simT))
+        sim.mean_lifetime_util = np.array([np.nan])
 
         # containers for verifying simulaton
         sim.A_own = np.nan + np.ones(shape_sim)
         sim.A_partner = np.nan + np.ones(shape_sim)
 
         ## f.1. shocks
-        np.random.seed(par.seed)
-        sim.draw_love = np.random.normal(size=shape_sim)
-        sim.draw_meet = np.random.uniform(size=shape_sim) # for meeting a partner
-
-        sim.draw_uniform_partner_Aw = np.random.uniform(size=shape_sim) # for inverse cdf transformation of partner wealth
-        sim.draw_uniform_partner_Am = np.random.uniform(size=shape_sim) # for inverse cdf tranformation of partner wealth
-
-        sim.draw_repartner_iL = np.random.choice(par.num_love, p=par.prob_partner_love, size=shape_sim) # Love index when repartnering
+        self.allocate_draws()
 
         ## f.2. initial distribution
         sim.init_A = par.grid_A[10] + np.zeros(par.simN)
@@ -285,6 +277,21 @@ class HouseholdModelClass(EconModelClass):
         
         # g. timing
         sol.solution_time = np.array([0.0])
+
+    def allocate_draws(self):
+        par = self.par
+        sim = self.sim
+        shape_sim = (par.simN,par.simT)
+
+        np.random.seed(par.seed)
+        sim.draw_love = np.random.normal(size=shape_sim)
+        sim.draw_meet = np.random.uniform(size=shape_sim) # for meeting a partner
+
+        sim.draw_uniform_partner_Aw = np.random.uniform(size=shape_sim) # for inverse cdf transformation of partner wealth
+        sim.draw_uniform_partner_Am = np.random.uniform(size=shape_sim) # for inverse cdf tranformation of partner wealth
+
+        sim.draw_repartner_iL = np.random.choice(par.num_love, p=par.prob_partner_love, size=shape_sim) # Love index when repartnering
+
         
     def setup_grids(self):
         par = self.par
@@ -380,10 +387,7 @@ class HouseholdModelClass(EconModelClass):
 
 
     def solve(self):
-        
-        #Begin timing
-        start_time = time.time()
-        
+
         sol = self.sol
         par = self.par 
 
@@ -405,9 +409,10 @@ class HouseholdModelClass(EconModelClass):
 
         self.cpp.simulate(sim,sol,par)
 
-        couple = sim.couple == 1
-        single = ~couple
-        sim.mean_log10_euler[0] = np.nanmean(np.log10( abs(sim.euler[couple]/sim.C_tot[couple]) + 1.0e-16)) + np.nanmean(np.log10( abs(sim.euler[single]/sim.Cw_tot[single]) + 1.0e-16))
+        sim.mean_lifetime_util[0] = np.mean(np.sum(sim.util,axis=1))
+        # couple = sim.couple == 1
+        # single = ~couple
+        # sim.mean_log10_euler[0] = np.nanmean(np.log10( abs(sim.euler[couple]/sim.C_tot[couple]) + 1.0e-16)) + np.nanmean(np.log10( abs(sim.euler[single]/sim.Cw_tot[single]) + 1.0e-16))
 
         # total consumption
         # sim.Cw_tot = sim.Cw_priv + sim.Cw_pub
