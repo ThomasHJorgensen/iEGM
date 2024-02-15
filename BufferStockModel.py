@@ -96,6 +96,8 @@ class BufferStockModelClass(EconModelClass):
         sim.P = np.nan + np.zeros(shape)
         sim.Y = np.nan + np.zeros(shape)
 
+        sim.util = np.nan + np.zeros(shape)
+        sim.mean_lifetime_util = np.nan
         sim.euler = np.nan + np.zeros(shape)
         sim.mean_log10_euler = np.nan
         
@@ -334,7 +336,11 @@ class BufferStockModelClass(EconModelClass):
                     sim.M[:,t+1] = (1.0+par.r)*sim.A[:,t+1] + sim.Y[:,t+1]
                     sim.m[:,t+1] = sim.M[:,t+1]/sim.P[:,t+1]
 
-                    # Euler error
+                # v. discounted utility
+                sim.util[:,t] = (par.beta**t)*self.util(sim.c[:,t])
+
+                # vi. Euler error
+                if t<par.T-1:
                     m_interp_next =  np.concatenate((np.array([0.0]),sol.m[t+1]))
                     c_interp_next =  np.concatenate((np.array([0.0]),sol.c[t+1]))
 
@@ -358,6 +364,7 @@ class BufferStockModelClass(EconModelClass):
                     sim.euler[I,t] = sim.c[I,t] - self.inv_marg_util(EmargV_next)
                     sim.euler[~I,t] = np.nan
 
+        sim.mean_lifetime_util = np.mean(np.sum(sim.util,axis=1))
         sim.mean_log10_euler = np.nanmean(np.log10( abs(sim.euler/sim.c) + 1.0e-16));
             
 
