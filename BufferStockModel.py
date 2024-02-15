@@ -106,16 +106,25 @@ class BufferStockModelClass(EconModelClass):
         sim.P_init = np.ones(par.simN)
 
         # e. random log-normal mean one income shocks
-        np.random.seed(par.seed)
-        sim.xi = np.exp(par.sigma_trans*np.random.normal(size=shape) - 0.5*par.sigma_trans**2)
-        sim.psi = np.exp(par.sigma_perm*np.random.normal(size=shape) - 0.5*par.sigma_perm**2)
+        self.allocate_draws()
 
         # f. pre-computation grids
         par.grid_C = nonlinspace(0.1,par.max_C,par.num_C,par.unequal_C)
         par.grid_marg_U = np.nan + np.zeros(par.num_C)
 
         par.grid_C_flip = np.nan + np.zeros(par.num_C) 
-        par.grid_marg_U_flip = np.nan + np.zeros(par.num_C)
+        par.grid_marg_U_flip = np.nan + np.zeros(par.num_C)    
+        
+    def allocate_draws(self):
+        par = self.par
+        sim = self.sim
+
+        np.random.seed(par.seed)
+        shape = (par.simN,par.T)
+        sim.xi = np.exp(par.sigma_trans*np.random.normal(size=shape) - 0.5*par.sigma_trans**2)
+        sim.psi = np.exp(par.sigma_perm*np.random.normal(size=shape) - 0.5*par.sigma_perm**2)
+
+        
 
 
     ############
