@@ -63,7 +63,6 @@ namespace single {
     void EGM_single_to_single(int t, int gender, sol_struct* sol, par_struct* par){
         // 1. Setup
         /// a. unpack
-        bool const &analytic_inv_marg_u_single {par->analytic_inv_marg_u_single};
         double* const &grid_inv_marg_u {par->grid_inv_marg_u};
 
         /// b. gender specific variables
@@ -110,16 +109,16 @@ namespace single {
             EmargU_pd[iA_pd] = par->beta*tools::interp_1d_index(grid_A, par->num_A, &margV[idx_next],A_next, min_point_A);
 
             /// c. invert marginal utility by interpolation from pre-computed grid
-            if (analytic_inv_marg_u_single == 1){
-                C_tot_pd[iA_pd] = utils::inv_marg_util_C(EmargU_pd[iA_pd], gender, par);
-            } else {
-                if (par->interp_inverse){
-                    C_tot_pd[iA_pd] = 1.0/tools::interp_1d(grid_marg_u_single_for_inv, par->num_marg_u, grid_inv_marg_u, EmargU_pd[iA_pd]); // AMO: invert
-                }
-                else{
-                    C_tot_pd[iA_pd] = tools::interp_1d(grid_marg_u_single_for_inv, par->num_marg_u, grid_inv_marg_u, EmargU_pd[iA_pd]);
-                }
-            }
+            // if (analytic_inv_marg_u_single == 1){
+            C_tot_pd[iA_pd] = utils::inv_marg_util_C(EmargU_pd[iA_pd], gender, par);
+            // } else {
+            //     if (par->interp_inverse){
+            //         C_tot_pd[iA_pd] = 1.0/tools::interp_1d(grid_marg_u_single_for_inv, par->num_marg_u, grid_inv_marg_u, EmargU_pd[iA_pd]); // AMO: invert
+            //     }
+            //     else{
+            //         C_tot_pd[iA_pd] = tools::interp_1d(grid_marg_u_single_for_inv, par->num_marg_u, grid_inv_marg_u, EmargU_pd[iA_pd]);
+            //     }
+            // }
             /// d. endogenous grid over resources
             M_pd[iA_pd] = C_tot_pd[iA_pd] + A_next;
         }
@@ -144,19 +143,8 @@ namespace single {
                 ///// o. consume all resources
                 C_tot[idx] = M_now; 
 
-                // ///// oo. calculate marginal value of constrained consumption
-                // if (par->analytic_marg_u_single){
-                //     margV[idx] = par->R * utils::marg_util_C(C_tot[idx], gender, par);
-                // }
-                // else{
-                //     margV[idx] = par->R * tools::interp_1d(par->grid_C_for_marg_u, par->num_marg_u, par->grid_marg_u, C_tot[idx]);
-                // }
+                
             }
-            //// if not credit constrained
-            // else{
-            //     // o. calculate marginal value of unconstrained consumption
-            //     margV[idx] = par->R * tools::interp_1d_index(M_pd, par->num_A_pd, EmargU_pd, M_now, min_point_A);
-            // }
 
             /// d. calculate private and public consumption
             intraperiod_allocation(&C_priv[idx], &C_pub[idx], C_tot[idx], gender, par);

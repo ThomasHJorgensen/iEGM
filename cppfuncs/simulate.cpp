@@ -296,7 +296,7 @@ namespace sim {
                         sim->C_tot[it] = C_tot;
 
                         double C_pub = 0.0;
-                        couple::intraperiod_allocation_sim(&sim->Cw_priv[it], &sim->Cm_priv[it], &C_pub,  C_tot,power,sol,par); 
+                        precompute::intraperiod_allocation_sim(&sim->Cw_priv[it], &sim->Cm_priv[it], &C_pub,  C_tot,power,sol,par); 
                         sim->Cw_pub[it] = C_pub;
                         sim->Cm_pub[it] = C_pub;
 

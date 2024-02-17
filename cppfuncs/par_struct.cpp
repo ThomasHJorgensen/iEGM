@@ -31,23 +31,16 @@ typedef struct par_struct
  int num_Ctot;
  double max_Ctot;
  bool do_egm;
- bool analytic_marg_u_single;
- bool analytic_inv_marg_u_single;
  int num_A_pd;
  double max_A_pd;
  int num_marg_u;
  int seed;
  int simT;
  int simN;
- bool use_external_solution;
- int num_A_true;
- double max_A_true;
- int num_power_true;
- int num_love_true;
- double max_love_true;
  int threads;
  bool centered_gradient;
  bool interp_power;
+ bool use_external_solution;
  double* grid_A;
  double* grid_Aw;
  double* grid_Am;
@@ -72,11 +65,6 @@ typedef struct par_struct
  double* prob_partner_love;
  double* cdf_partner_Aw;
  double* cdf_partner_Am;
- double* grid_A_true;
- double* grid_Aw_true;
- double* grid_Am_true;
- double* grid_power_true;
- double* grid_love_true;
 } par_struct;
 
 double get_double_par_struct(par_struct* x, char* name){
@@ -101,8 +89,6 @@ double get_double_par_struct(par_struct* x, char* name){
  else if( strcmp(name,"p_meet") == 0 ){ return x->p_meet; }
  else if( strcmp(name,"max_Ctot") == 0 ){ return x->max_Ctot; }
  else if( strcmp(name,"max_A_pd") == 0 ){ return x->max_A_pd; }
- else if( strcmp(name,"max_A_true") == 0 ){ return x->max_A_true; }
- else if( strcmp(name,"max_love_true") == 0 ){ return x->max_love_true; }
  else {return NAN;}
 
 }
@@ -121,9 +107,6 @@ int get_int_par_struct(par_struct* x, char* name){
  else if( strcmp(name,"seed") == 0 ){ return x->seed; }
  else if( strcmp(name,"simT") == 0 ){ return x->simT; }
  else if( strcmp(name,"simN") == 0 ){ return x->simN; }
- else if( strcmp(name,"num_A_true") == 0 ){ return x->num_A_true; }
- else if( strcmp(name,"num_power_true") == 0 ){ return x->num_power_true; }
- else if( strcmp(name,"num_love_true") == 0 ){ return x->num_love_true; }
  else if( strcmp(name,"threads") == 0 ){ return x->threads; }
  else {return -9999;}
 
@@ -158,11 +141,6 @@ double* get_double_p_par_struct(par_struct* x, char* name){
  else if( strcmp(name,"prob_partner_love") == 0 ){ return x->prob_partner_love; }
  else if( strcmp(name,"cdf_partner_Aw") == 0 ){ return x->cdf_partner_Aw; }
  else if( strcmp(name,"cdf_partner_Am") == 0 ){ return x->cdf_partner_Am; }
- else if( strcmp(name,"grid_A_true") == 0 ){ return x->grid_A_true; }
- else if( strcmp(name,"grid_Aw_true") == 0 ){ return x->grid_Aw_true; }
- else if( strcmp(name,"grid_Am_true") == 0 ){ return x->grid_Am_true; }
- else if( strcmp(name,"grid_power_true") == 0 ){ return x->grid_power_true; }
- else if( strcmp(name,"grid_love_true") == 0 ){ return x->grid_love_true; }
  else {return NULL;}
 
 }
@@ -173,11 +151,9 @@ bool get_bool_par_struct(par_struct* x, char* name){
  if( strcmp(name,"interp_inverse") == 0 ){ return x->interp_inverse; }
  else if( strcmp(name,"precompute_intratemporal") == 0 ){ return x->precompute_intratemporal; }
  else if( strcmp(name,"do_egm") == 0 ){ return x->do_egm; }
- else if( strcmp(name,"analytic_marg_u_single") == 0 ){ return x->analytic_marg_u_single; }
- else if( strcmp(name,"analytic_inv_marg_u_single") == 0 ){ return x->analytic_inv_marg_u_single; }
- else if( strcmp(name,"use_external_solution") == 0 ){ return x->use_external_solution; }
  else if( strcmp(name,"centered_gradient") == 0 ){ return x->centered_gradient; }
  else if( strcmp(name,"interp_power") == 0 ){ return x->interp_power; }
+ else if( strcmp(name,"use_external_solution") == 0 ){ return x->use_external_solution; }
  else {return false;}
 
 }

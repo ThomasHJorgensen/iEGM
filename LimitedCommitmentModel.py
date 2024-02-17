@@ -89,8 +89,6 @@ class HouseholdModelClass(EconModelClass):
         par.max_Ctot = par.max_A*2
         
         par.do_egm = False
-        par.analytic_marg_u_single = False
-        par.analytic_inv_marg_u_single = False
         par.num_A_pd = par.num_A * 2
         par.max_A_pd = par.max_A
         par.num_marg_u = 200
@@ -99,15 +97,6 @@ class HouseholdModelClass(EconModelClass):
         par.seed = 9210
         par.simT = par.T
         par.simN = 50_000
-
-        # use external solution for euler errors
-        par.use_external_solution = False # if True, Euler errors are computed using EmargV from external solution. Must be set using self.set_true_EmargV before linking to cpp. If False, Euler errors are computed using EmargV from the current solution.
-
-        par.num_A_true = 50 # grids for true EmargV - overwritten by self.set_true_EmargV if run
-        par.max_A_true = 15.0
-        par.num_power_true = 21
-        par.num_love_true = 41
-        par.max_love_true = 1.0
 
         # cpp
         par.threads = 8
@@ -230,12 +219,6 @@ class HouseholdModelClass(EconModelClass):
         sol.pre_Ctot_Cw_priv =  np.nan + np.ones(shape_pre)      # precomputed optimal allocation of consumption over grid of total C 
         sol.pre_Ctot_Cm_priv = np.nan + np.ones(shape_pre)
         sol.pre_Ctot_C_pub = np.nan + np.ones(shape_pre)
-
-        # e. containers for "true" solution - overwritten by self.set_true_EmargV if run
-        shape_true = (par.T,par.num_power_true,par.num_love_true,par.num_A_true)
-        sol.EmargV_start_as_couple_true = np.nan + np.ones(shape_true)
-        sol.EmargVw_start_as_single_true = np.nan + np.ones((par.T,par.num_A_true))
-        sol.EmargVm_start_as_single_true = np.nan + np.ones((par.T,par.num_A_true))
     
 
         # f. simulation
@@ -256,7 +239,7 @@ class HouseholdModelClass(EconModelClass):
         sim.power = np.nan + np.ones(shape_sim)
         sim.love = np.nan + np.ones(shape_sim)
 
-        # euler errors
+        # lifetime utility
         sim.util = np.nan + np.ones((par.simN, par.simT))
         sim.mean_lifetime_util = np.array([np.nan])
 
@@ -366,23 +349,6 @@ class HouseholdModelClass(EconModelClass):
         par.cdf_partner_Aw = np.cumsum(par.prob_partner_A_w,axis=1) # cumulative distribution to be used in simulation
         par.cdf_partner_Am = np.cumsum(par.prob_partner_A_m,axis=1)
 
-
-        # grids for "true" solution - overwritten by self.set_true_EmargV if run
-        par.grid_A_true = nonlinspace(0.0,par.max_A,par.num_A_true,1.1)
-        par.grid_Aw_true = par.div_A_share * par.grid_A_true
-        par.grid_Am_true = (1-par.div_A_share) * par.grid_A_true
-
-        odd_num = np.mod(par.num_power_true,2)
-        first_part = nonlinspace(0.0,0.5,(par.num_power_true+odd_num)//2,1.3)
-        last_part = np.flip(1.0 - nonlinspace(0.0,0.5,(par.num_power_true-odd_num)//2 + 1,1.3))[1:]
-        par.grid_power_true = np.append(first_part,last_part)
-        
-        par.grid_love_true = np.array([0.0])
-
-        if par.num_love_true>1:
-                par.grid_love_true = np.linspace(-par.max_love_true,par.max_love_true,par.num_love_true)
-        else:
-            par.grid_love_true = np.array([0.0])
 
 
 

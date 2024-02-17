@@ -24,36 +24,6 @@ namespace couple {
         return V_couple_to_couple - V_couple_to_single;
     }
 
-    void intraperiod_allocation(double* Cw_priv, double* Cm_priv, double* C_pub , double C_tot,int iP,sol_struct *sol,par_struct *par){
-        // This function is almost identical to one used in pre-computation... to get "util_C_couple"
-        if(par->precompute_intratemporal){
-            // interpolate pre-computed solution 
-            int idx = index::index2(iP,0,par->num_power,par->num_Ctot); 
-            int j1 = tools::binary_search(0,par->num_Ctot,par->grid_Ctot,C_tot);
-
-            Cw_priv[0] = tools::interp_1d_index(par->grid_Ctot,par->num_Ctot,&sol->pre_Ctot_Cw_priv[idx],C_tot,j1);
-            Cm_priv[0] = tools::interp_1d_index(par->grid_Ctot,par->num_Ctot,&sol->pre_Ctot_Cm_priv[idx],C_tot,j1);
-            C_pub[0] = C_tot - Cw_priv[0] - Cm_priv[0];
-
-        } else {
-            // solve intertemporal problem
-            double start_Cw_priv = C_tot/3.0; // could be inputs
-            double start_Cm_priv = C_tot/3.0;
-            precompute::solve_intraperiod_couple(Cw_priv,Cm_priv,C_pub,C_tot,par->grid_power[iP],par,start_Cw_priv,start_Cm_priv);
-        
-        }
-    }
-
-    void intraperiod_allocation_sim(double* Cw_priv, double* Cm_priv, double* C_pub , double C_tot,double power,sol_struct *sol,par_struct *par){
-        // interpolate pre-computed solution in both power and C_tot
-        int idx = index::index2(0,0,par->num_power,par->num_Ctot); 
-
-        tools::interp_2d_2out(par->grid_power,par->grid_Ctot,par->num_power,par->num_Ctot,&sol->pre_Ctot_Cw_priv[idx],&sol->pre_Ctot_Cm_priv[idx],power,C_tot,Cw_priv,Cm_priv);
-
-        C_pub[0] = C_tot - Cw_priv[0] - Cm_priv[0];
-
-    }
-
     double resources(double A, par_struct* par){
         return par->R*A + par->inc_w + par->inc_m;
     }
@@ -63,7 +33,7 @@ namespace couple {
         double power = par->grid_power[iP];
 
         // current utility from consumption allocation
-        intraperiod_allocation(Cw_priv, Cm_priv, C_pub , C_tot,iP,sol,par);
+        precompute::intraperiod_allocation(Cw_priv, Cm_priv, C_pub , C_tot,iP,sol,par);
         Vw[0] = utils::util(*Cw_priv,*C_pub,woman,par,love); 
         Vm[0] = utils::util(*Cm_priv,*C_pub,man,par,love);
 
@@ -259,6 +229,11 @@ namespace couple {
         // 2. Solve remaining periods with EGM
         } else {
             // Solve on endogenous grid
+            double Cw_priv = 0.0;
+            double Cm_priv = 0.0;
+            double C_pub {};
+            double Vw {};
+            double Vm {};
             for (int iA_pd=0; iA_pd<par->num_A_pd;iA_pd++){
 
                 // i. Unpack
@@ -271,16 +246,22 @@ namespace couple {
 
                 // iii. Get total consumption by interpolation of pre-computed inverse marginal utility (coming from Euler)
                 if (strcmp(par->interp_method,"numerical")==0){
-                    double power = par->grid_power[iP];
                     
-                    double guess = 3.0;
+                    // starting values
+                    double guess_Ctot = 3.0;
+                    double guess_Cw_priv = guess_Ctot/3.0;
+                    double guess_Cm_priv = guess_Ctot/3.0;
                     if(iA_pd>0){
-                        guess = sol->C_tot_pd[index::couple_pd(t,iP,iL,iA_pd-1,par)];
+                        // last found solution
+                        guess_Ctot = sol->C_tot_pd[index::couple_pd(t,iP,iL,iA_pd-1,par)];
+                        guess_Cw_priv = Cw_priv;
+                        guess_Cm_priv = Cm_priv;
+
                     } else if (t<(par->T-2)) {
-                        guess = sol->C_tot_pd[index::couple_pd(t+1,iP,iL,iA_pd,par)];
+                        guess_Ctot = sol->C_tot_pd[index::couple_pd(t+1,iP,iL,iA_pd,par)];
                     }
-                    
-                    sol->C_tot_pd[idx_pd] = precompute::inv_marg_util_couple(sol->EmargU_pd[idx_pd],power,par,sol,guess, par->precompute_intratemporal); // numerical inverse
+                                        
+                    sol->C_tot_pd[idx_pd] = precompute::inv_marg_util_couple(sol->EmargU_pd[idx_pd],iP,par,sol,guess_Ctot,guess_Cw_priv,guess_Cm_priv); // numerical inverse
 
                 } else {
                     if(strcmp(par->interp_method,"linear")==0){
@@ -295,12 +276,7 @@ namespace couple {
                 // iv. Get endogenous grid points
                 sol->M_pd[idx_pd] = A_next + sol->C_tot_pd[idx_pd];
 
-                // v. Get post-choice value
-                double Cw_priv {};
-                double Cm_priv {};
-                double C_pub {};
-                double Vw {};
-                double Vm {};
+                // v. Get post-choice value (also updates the intra-period allocation)
                 sol->V_couple_to_couple_pd[idx_pd] = value_of_choice_couple_to_couple(&Cw_priv, &Cm_priv, &C_pub, &Vw, &Vm, sol->C_tot_pd[idx_pd],t,sol->M_pd[idx_pd],iL,iP,EVw_next,EVm_next,sol,par);
             }
 

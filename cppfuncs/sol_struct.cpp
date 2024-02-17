@@ -67,9 +67,6 @@ typedef struct sol_struct
  double* pre_Ctot_Cw_priv;
  double* pre_Ctot_Cm_priv;
  double* pre_Ctot_C_pub;
- double* EmargV_start_as_couple_true;
- double* EmargVw_start_as_single_true;
- double* EmargVm_start_as_single_true;
  double* solution_time;
 } sol_struct;
 
@@ -140,9 +137,6 @@ double* get_double_p_sol_struct(sol_struct* x, char* name){
  else if( strcmp(name,"pre_Ctot_Cw_priv") == 0 ){ return x->pre_Ctot_Cw_priv; }
  else if( strcmp(name,"pre_Ctot_Cm_priv") == 0 ){ return x->pre_Ctot_Cm_priv; }
  else if( strcmp(name,"pre_Ctot_C_pub") == 0 ){ return x->pre_Ctot_C_pub; }
- else if( strcmp(name,"EmargV_start_as_couple_true") == 0 ){ return x->EmargV_start_as_couple_true; }
- else if( strcmp(name,"EmargVw_start_as_single_true") == 0 ){ return x->EmargVw_start_as_single_true; }
- else if( strcmp(name,"EmargVm_start_as_single_true") == 0 ){ return x->EmargVm_start_as_single_true; }
  else if( strcmp(name,"solution_time") == 0 ){ return x->solution_time; }
  else {return NULL;}
 
