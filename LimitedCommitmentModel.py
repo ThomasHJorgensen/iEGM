@@ -358,7 +358,7 @@ class HouseholdModelClass(EconModelClass):
         par = self.par 
 
         # setup grids
-        self.setup_grids() #<--- this clears be
+        self.setup_grids()
 
         self.cpp.solve(sol,par)
 
@@ -376,46 +376,6 @@ class HouseholdModelClass(EconModelClass):
         self.cpp.simulate(sim,sol,par)
 
         sim.mean_lifetime_util[0] = np.mean(np.sum(sim.util,axis=1))
-        # couple = sim.couple == 1
-        # single = ~couple
-        # sim.mean_log10_euler[0] = np.nanmean(np.log10( abs(sim.euler[couple]/sim.C_tot[couple]) + 1.0e-16)) + np.nanmean(np.log10( abs(sim.euler[single]/sim.Cw_tot[single]) + 1.0e-16))
-
-        # total consumption
-        # sim.Cw_tot = sim.Cw_priv + sim.Cw_pub
-        # sim.Cm_tot = sim.Cm_priv + sim.Cm_pub
-        # sim.C_tot = sim.Cw_priv + sim.Cm_priv + sim.Cw_pub
-
-
-    def set_true_EmargV(self, EmargV_start_as_couple, EmargVw_start_as_single, EmargVm_start_as_single, grid_A_true, grid_power_true, grid_love_true):
-        
-        par = self.par
-        sol = self.sol
-
-        # set dimensions
-        par.num_A_true = grid_A_true.size
-        par.max_A_true = grid_A_true.max()
-        par.num_power_true = grid_power_true.size
-        par.num_love_true = grid_love_true.size
-        par.max_love_true = grid_love_true.max()
-
-        # verify that the dimensions of the true EmargV are the same
-        shape_couple = (par.T,par.num_power_true,par.num_love_true,par.num_A_true)
-        shape_single = (par.T,par.num_A_true)
-        assert EmargV_start_as_couple.shape == shape_couple, f"EmargV_start_as_couple has shape {EmargV_start_as_couple.shape}, expected {shape_couple}"
-        assert EmargVw_start_as_single.shape == shape_single, f"EmargVw_start_as_single has shape {EmargVw_start_as_single.shape}, expected {shape_single}"
-        assert EmargVm_start_as_single.shape == shape_single, f"EmargVm_start_as_single has shape {EmargVm_start_as_single.shape}, expected {shape_single}"
-
-        # setup grids
-        par.grid_A_true = grid_A_true
-        par.grid_Aw_true = grid_A_true * par.div_A_share
-        par.grid_Am_true = grid_A_true * (1.0 - par.div_A_share)
-        par.grid_power_true = grid_power_true
-        par.grid_love_true = grid_love_true
-
-        # save true EmargV
-        sol.EmargV_start_as_couple_true = EmargV_start_as_couple 
-        sol.EmargVw_start_as_single_true = EmargVw_start_as_single
-        sol.EmargVm_start_as_single_true = EmargVm_start_as_single
 
         
 
