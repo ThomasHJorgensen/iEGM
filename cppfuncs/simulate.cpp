@@ -157,7 +157,7 @@ namespace sim {
 
     }
 
-    int calc_initial_bargaining_weight(int t, int iL, int A, int Ap, int gender, sol_struct *sol, par_struct *par){
+    int calc_initial_bargaining_weight(int t, int iL, double A, double Ap, int gender, sol_struct *sol, par_struct *par){
 
         // unpack
         double Aw = A;
@@ -263,7 +263,7 @@ namespace sim {
                             sim->A_own[it] = Aw_lag;
                             sim->A_partner[it] = Ap;
                             iL = sim->draw_repartner_iL[it]; // note: love draws on grid.
-                            iP = calc_initial_bargaining_weight(t, iL, Aw_lag, woman, Ap, sol, par);
+                            iP = calc_initial_bargaining_weight(t, iL, Aw_lag, Ap, woman, sol, par); //calc_initial_bargaining_weight(t, iL, Aw_lag, woman, Ap, sol, par); // completely wrong order and types....
                         }
 
                         // update state variables
