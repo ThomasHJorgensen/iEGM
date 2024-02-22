@@ -51,7 +51,7 @@ class BufferStockModelClass(EconModelClass):
         par.max_C = 10.0 # maximum point in pre-computation grid
         par.unequal_C = 1.1
 
-        par.interp_method = 'linear' # linear, regression, Bspline
+        par.interp_method = 'linear' # numerical, linear, Bspline
         par.interp_inverse = False # True: interpolate inverse consumption
         par.interp_degree = 8
 
@@ -101,12 +101,12 @@ class BufferStockModelClass(EconModelClass):
         sim.euler = np.nan + np.zeros(shape)
         sim.mean_log10_euler = np.nan
         
-        # d. initialization
-        sim.a_init = np.zeros(par.simN)
-        sim.P_init = np.ones(par.simN)
-
-        # e. random log-normal mean one income shocks
+        # d. random log-normal mean one income shocks
         self.allocate_draws()
+
+        # e. initialization
+        sim.a_init = np.linspace(0.0,par.max_m*0.5,par.simN)
+        sim.P_init = np.ones(par.simN)
 
         # f. pre-computation grids
         par.grid_C = nonlinspace(0.1,par.max_C,par.num_C,par.unequal_C)
