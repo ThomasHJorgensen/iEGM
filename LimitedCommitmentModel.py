@@ -151,6 +151,9 @@ class HouseholdModelClass(EconModelClass):
         sol.EmargVw_start_as_single = np.nan + np.ones(shape_single)
         sol.EmargVm_start_as_single = np.nan + np.ones(shape_single)  
 
+        sol.EVw_cond_meet_partner = np.nan + np.ones(shape_single)
+        sol.EVm_cond_meet_partner = np.nan + np.ones(shape_single)
+
 
         # b. couples
         shape_couple = (par.T,par.num_power,par.num_love,par.num_A)     # states when couple: T, assets, power, love
