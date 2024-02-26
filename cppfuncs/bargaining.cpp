@@ -405,4 +405,70 @@ namespace bargaining {
     
 }
 
+//NASH BARGAINED INITIAL WEIGHT
+    typedef struct {        
+        par_struct *par;   
+        sol_struct *sol;                                    
+        double (*surplus_func)(double,index::state_couple_struct*,index::state_single_struct*,int,par_struct*,sol_struct*); //surplus func as function of power and state
+        index::state_couple_struct *state_couple;                                       // state - tbc 
+        index::state_single_struct *state_single_w;                                       // state - tbc   
+        index::state_single_struct *state_single_m;                                       // state - tbc                              
+    } nash_solver_struct;
+
+    // compute negative nash surplus for given power + nash_struct
+    double objfunc_nash_bargain(unsigned n, const double *x, double *grad, void* solver_data_in){
+        // unpack
+        nash_solver_struct* solver_data = (nash_solver_struct*) solver_data_in; 
+        par_struct* par = solver_data->par;
+        sol_struct* sol = solver_data->sol;
+        double (*surplus_func)(double,index::state_couple_struct*, index::state_single_struct*,int,par_struct*,sol_struct*) = solver_data->surplus_func; //TODO: take continuous states as input as generically as possible
+
+        // calculate individual supluses
+        double Sw_x = surplus_func(x[0],solver_data->state_couple, solver_data->state_single_w, woman, par, sol);
+        double Sm_x = surplus_func(x[0],solver_data->state_couple, solver_data->state_single_m, man, par, sol);
+
+        return -(Sw_x*Sm_x); 
+    }
+
+    
+    double nash_bargain(nash_solver_struct* nash_struct){
+        // for a given couple idx, find the initial bargaining weight
+
+        // unpack
+        par_struct* par = nash_struct->par;
+        sol_struct* sol = nash_struct->sol;
+
+        // set up solver
+        int const dim = 1;
+        auto opt = nlopt_create(NLOPT_LN_BOBYQA, dim);
+        nlopt_set_min_objective(opt, objfunc_nash_bargain, nash_struct);
+
+        // set bounds
+        double lb[dim], ub[dim];
+        lb[0] = par->grid_power[0];
+        ub[0] = par->grid_power[par->num_power-1];
+        nlopt_set_lower_bounds(opt, lb);
+        nlopt_set_upper_bounds(opt, ub);
+
+        //optimize
+        double minf = 0.0;
+        double mu[dim];
+        mu[0] = 0.5;
+        nlopt_optimize(opt, mu, &minf);
+        nlopt_destroy(opt);
+
+        // check surplus is positive
+        double (*surplus_func)(double,index::state_couple_struct*, index::state_single_struct*,int,par_struct*,sol_struct*) = nash_struct->surplus_func; //TODO: take continuous states as input as generically as possible
+        index::state_couple_struct* state_couple = nash_struct->state_couple;
+        index::state_single_struct* state_single_w = nash_struct->state_single_w;
+        index::state_single_struct* state_single_m = nash_struct->state_single_m;
+        double Sw = surplus_func(mu[0], state_couple, state_single_w, woman, par, sol);
+        double Sm = surplus_func(mu[0], state_couple, state_single_m, man, par, sol);
+        if ((Sw<0.0) |(Sm<0.0)){
+            mu[0] = -1.0;
+        }
+
+        return mu[0];
+    }
+
 } // namespace bargaining

@@ -157,51 +157,6 @@ namespace sim {
 
     }
 
-    int calc_initial_bargaining_weight(int t, int iL, double A, double Ap, int gender, sol_struct *sol, par_struct *par){
-
-        // unpack
-        double Aw = A;
-        double Am = Ap;
-        if (gender==man){
-            Aw = Ap;
-            Am = A;
-        }              
-
-        // a. value of being single
-        int idx_single = index::single(t,0,par);
-        double Vw_single = tools::interp_1d(par->grid_Aw,par->num_A,&sol->Vw_single_to_single[idx_single],Aw);
-        double Vm_single = tools::interp_1d(par->grid_Am,par->num_A,&sol->Vm_single_to_single[idx_single],Am);
-
-        // b. Setup values for being in couple
-        double Vw_single_to_couple = 0.0;
-        double Vm_single_to_couple = 0.0;
-        double A_tot = Aw+Am;
-        int iA = tools::binary_search(0, par->num_A, par->grid_A, A_tot);
-        
-        // c. Calculate surplus of being in couple
-        double* Sw = new double[par->num_power];
-        double* Sm = new double[par->num_power];
-
-        for (int iP=0; iP < par->num_power; iP++){
-            int idx_interp = index::couple(t, iP, iL, 0, par);
-            Vw_single_to_couple = tools::interp_1d_index(par->grid_A, par->num_A, &sol->Vw_single_to_couple[idx_interp], A_tot, iA);
-            Vm_single_to_couple = tools::interp_1d_index(par->grid_A, par->num_A, &sol->Vm_single_to_couple[idx_interp], A_tot, iA);
-            Sw[iP] = Vw_single_to_couple - Vw_single;
-            Sm[iP] = Vm_single_to_couple - Vm_single;
-        }
-
-        // d. Calculate initial bargaining weight
-        int init_mu = bargaining::initial_weight(Sw, Sm, par);
-
-        // e. clean up
-        delete Sw;
-        delete Sm;
-
-        return init_mu;
-
-    }
-
-
     void model(sim_struct *sim, sol_struct *sol, par_struct *par){
     
         // pre-compute intra-temporal optimalallocation
@@ -254,7 +209,6 @@ namespace sim {
                     else { // if start as single - follow woman only
                         // meet partner?
                         bool meet = (sim->draw_meet[it] < par->prob_repartner[t]);
-                        int iP = -1;
                         double Ap = 0.0;
                         int iL = 0;
                         // draw partner type
@@ -263,16 +217,15 @@ namespace sim {
                             sim->A_own[it] = Aw_lag;
                             sim->A_partner[it] = Ap;
                             iL = sim->draw_repartner_iL[it]; // note: love draws on grid.
-                            iP = calc_initial_bargaining_weight(t, iL, Aw_lag, Ap, woman, sol, par); //calc_initial_bargaining_weight(t, iL, Aw_lag, woman, Ap, sol, par); // completely wrong order and types....
+
+                            power = single::calc_initial_bargaining_weight(t, par->grid_love[iL], Aw_lag, Ap, sol, par);
                         }
 
                         // update state variables
-                        if (iP <0) {
-                            power = -1.0;
+                        if (power < 0.0) {
                             sim->couple[it] = false;
                         } else {
                             sim->couple[it] = true;
-                            power = par->grid_power[iP];
                             sim->A_own[it_1] = Aw_lag;
                             sim->A_partner[it_1] = Ap;
                             A_lag = Aw_lag + Ap;
