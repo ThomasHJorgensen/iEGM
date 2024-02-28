@@ -26,6 +26,8 @@ typedef struct sol_struct
  double* EVm_start_as_single;
  double* EmargVw_start_as_single;
  double* EmargVm_start_as_single;
+ double* EVw_cond_meet_partner;
+ double* EVm_cond_meet_partner;
  double* Vw_couple_to_couple;
  double* Vm_couple_to_couple;
  double* V_couple_to_couple;
@@ -98,6 +100,8 @@ double* get_double_p_sol_struct(sol_struct* x, char* name){
  else if( strcmp(name,"EVm_start_as_single") == 0 ){ return x->EVm_start_as_single; }
  else if( strcmp(name,"EmargVw_start_as_single") == 0 ){ return x->EmargVw_start_as_single; }
  else if( strcmp(name,"EmargVm_start_as_single") == 0 ){ return x->EmargVm_start_as_single; }
+ else if( strcmp(name,"EVw_cond_meet_partner") == 0 ){ return x->EVw_cond_meet_partner; }
+ else if( strcmp(name,"EVm_cond_meet_partner") == 0 ){ return x->EVm_cond_meet_partner; }
  else if( strcmp(name,"Vw_couple_to_couple") == 0 ){ return x->Vw_couple_to_couple; }
  else if( strcmp(name,"Vm_couple_to_couple") == 0 ){ return x->Vm_couple_to_couple; }
  else if( strcmp(name,"V_couple_to_couple") == 0 ){ return x->V_couple_to_couple; }

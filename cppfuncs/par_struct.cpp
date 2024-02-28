@@ -39,8 +39,6 @@ typedef struct par_struct
  int simN;
  int threads;
  bool centered_gradient;
- bool interp_power;
- bool use_external_solution;
  double* grid_A;
  double* grid_Aw;
  double* grid_Am;
@@ -152,8 +150,6 @@ bool get_bool_par_struct(par_struct* x, char* name){
  else if( strcmp(name,"precompute_intratemporal") == 0 ){ return x->precompute_intratemporal; }
  else if( strcmp(name,"do_egm") == 0 ){ return x->do_egm; }
  else if( strcmp(name,"centered_gradient") == 0 ){ return x->centered_gradient; }
- else if( strcmp(name,"interp_power") == 0 ){ return x->interp_power; }
- else if( strcmp(name,"use_external_solution") == 0 ){ return x->use_external_solution; }
  else {return false;}
 
 }

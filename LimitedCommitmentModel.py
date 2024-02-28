@@ -254,7 +254,7 @@ class HouseholdModelClass(EconModelClass):
         self.allocate_draws()
 
         ## f.2. initial distribution
-        sim.init_A = np.linspace(0.0,par.max_A*0.5,par.simN) #par.grid_A[10] + np.zeros(par.simN)
+        sim.init_A = np.linspace(0.0,par.max_A*0.5,par.simN) 
         sim.init_Aw = sim.init_A * par.div_A_share
         sim.init_Am = sim.init_A * (1.0 - par.div_A_share)
         sim.init_couple = np.ones(par.simN,dtype=np.bool_)
