@@ -166,107 +166,97 @@ namespace sim {
             for (int i=0; i<par->simN; i++){
                 for (int t=0; t < par->simT; t++){
                     int it = index::index2(i,t,par->simN,par->simT);
-                    int it_1 = index::index2(i,t-1,par->simN,par->simT);
-                    int it1 = index::index2(i,t+1,par->simN,par->simT);
 
                     // state variables
-                    double A_lag = sim->init_A[i];
-                    double Aw_lag = sim->init_Aw[i];
-                    double Am_lag = sim->init_Am[i];
-                    bool couple_lag = sim->init_couple[i];
-                    double power_lag = par->grid_power[sim->init_power_idx[i]];
-                    double love = sim->init_love[i];
-
-                    if (t>0){
+                    double A_lag = 0;
+                    double Aw_lag = 0;
+                    double Am_lag = 0;
+                    bool   couple_lag = 0;
+                    double power_lag = 0;
+                    double love = 0;
+                    if (t==0){
+                        A_lag = sim->init_A[i];
+                        Aw_lag = sim->init_Aw[i];
+                        Am_lag = sim->init_Am[i];
+                        couple_lag = sim->init_couple[i];
+                        power_lag = par->grid_power[sim->init_power_idx[i]];
+                        love = sim->init_love[i];
+                        sim->love[it] = love;
+                    } else {
+                        int it_1 = index::index2(i,t-1,par->simN,par->simT);
                         A_lag = sim->A[it_1];
                         Aw_lag = sim->Aw[it_1];
                         Am_lag = sim->Am[it_1];
                         couple_lag = sim->couple[it_1];
                         power_lag = sim->power[it_1];
                         love = sim->love[it];
-                    } else {
-                        sim->love[it] = love;
-                    }
-
+                    } 
                     
-                    // first check if they want to remain together and what the bargaining power will be if they do.
-                    double power;
-                    double C_tot;
-                    //int idx_power,idx_love,idx_A;
+                    // i) Find transitions in couple/single status and calculate power 
+                    double power = 1000; // nonsense value
                     if (couple_lag) { // if start as couple
 
                         power = update_power(t,power_lag,love,A_lag,Aw_lag,Am_lag,sim,sol,par);
-                        
-
+        
                         if (power < 0.0) { // divorce is coded as -1
                             sim->couple[it] = false;
-
                         } else {
                             sim->couple[it] = true;
                         }
 
-                    } 
-                    else { // if start as single - follow woman only
-                        // meet partner?
+                    } else { // if start as single - follow woman only
                         bool meet = (sim->draw_meet[it] < par->prob_repartner[t]);
-                        double Ap = 0.0;
-                        int iL = 0;
-                        // draw partner type
-                        if (meet){
-                            Ap = draw_partner_assets(Aw_lag, woman, i,t, sim, par);
-                            sim->A_own[it] = Aw_lag;
-                            sim->A_partner[it] = Ap;
-                            iL = sim->draw_repartner_iL[it]; // note: love draws on grid.
+                        if (meet){ // if meet a potential partner
+                            double Ap = draw_partner_assets(Aw_lag, woman, i,t, sim, par);
+                            int iL = sim->draw_repartner_iL[it]; // note: love draws on grid.
 
                             power = single::calc_initial_bargaining_weight(t, par->grid_love[iL], Aw_lag, Ap, sol, par);
-                            
-                        } else {
-                            power = -1.0;
-                        }
 
-                        // update state variables
-                        if (power < 0.0) {
+                            if (0.0 <= power) { // if meet and agree to couple
+                                sim->couple[it] = true;
+
+                                // set beginning-of-period couple states
+                                A_lag = Aw_lag + Ap;
+                                love = par->grid_love[iL];
+                                sim->love[it] = love;
+                            } else { // if meet but do not agree to couple
+                                power = -1.0;
+                                sim->couple[it] = false;
+                            }
+                            
+                        } else { // if do not meet
+                            power = -1.0;
                             sim->couple[it] = false;
-                        } else {
-                            sim->couple[it] = true;
-                            sim->A_own[it_1] = Aw_lag;
-                            sim->A_partner[it_1] = Ap;
-                            A_lag = Aw_lag + Ap;
-                            love = par->grid_love[iL];
-                            sim->love[it] = love;
                         }
                     }
 
-                    // update behavior
+                    // ii) Find choices and update states
                     if (sim->couple[it]){
                         
-                        // optimal consumption allocation if couple (interpolate in power, love, A)
+                        // total consumption
                         int idx_sol = index::index4(t,0,0,0,par->T,par->num_power,par->num_love,par->num_A);
-                        C_tot = tools::interp_3d(par->grid_power,par->grid_love,par->grid_A,par->num_power,par->num_love,par->num_A ,&sol->C_tot_couple_to_couple[idx_sol],power,love,A_lag);
-
-                        // enforce ressource constraint (may be slightly broken due to approximation error)
-                        double M_resources = couple::resources(A_lag,par);
-                        if (C_tot > M_resources){
+                        double C_tot = tools::interp_3d(par->grid_power,par->grid_love,par->grid_A,par->num_power,par->num_love,par->num_A ,&sol->C_tot_couple_to_couple[idx_sol],power,love,A_lag);
+                        double M_resources = couple::resources(A_lag,par); // enforce ressource constraint (may be slightly broken due to approximation error)
+                        if (C_tot > M_resources){ 
                             C_tot = M_resources;
                         }
                         sim->C_tot[it] = C_tot;
 
-                        double C_pub = 0.0;
+                        // consumpton allocation
+                        double C_pub = 0.0; // placeholder for public consumption
                         precompute::intraperiod_allocation_sim(&sim->Cw_priv[it], &sim->Cm_priv[it], &C_pub,  C_tot,power,sol,par); 
                         sim->Cw_pub[it] = C_pub;
                         sim->Cm_pub[it] = C_pub;
 
                         // update end-of-period states
                         sim->A[it] = M_resources - sim->Cw_priv[it] - sim->Cm_priv[it] - C_pub;
-                        if(t<par->simT-1){
-                            sim->love[it1] = love + par->sigma_love*sim->draw_love[it1];
-                        }
-
-                        // in case of divorce
                         sim->Aw[it] = par->div_A_share * sim->A[it];
                         sim->Am[it] = (1.0-par->div_A_share) * sim->A[it];
-
                         sim->power[it] = power;
+                        if(t<par->simT-1){
+                            int it1 = index::index2(i,t+1,par->simN,par->simT);
+                            sim->love[it1] = love + par->sigma_love*sim->draw_love[it1];
+                        }
 
 
                     } else { // single
@@ -280,12 +270,10 @@ namespace sim {
                             sol_single_m = &sol->Cm_tot_single_to_single[idx_sol_single];
                         } 
 
-                        // optimal consumption allocations
+                        // total consumption
                         double Cw_tot = tools::interp_1d(par->grid_Aw,par->num_A,sol_single_w,Aw_lag);
                         double Cm_tot = tools::interp_1d(par->grid_Am,par->num_A,sol_single_m,Am_lag);
-
-                        // enforce ressource constraint (may be slightly broken due to approximation error)
-                        double Mw = single::resources(Aw_lag, woman, par);
+                        double Mw = single::resources(Aw_lag, woman, par); // enforce ressource constraint (may be slightly broken due to approximation error)
                         double Mm = single::resources(Am_lag, man, par);
                         if (Cw_tot > Mw){
                             Cw_tot = Mw;
@@ -293,23 +281,21 @@ namespace sim {
                         if (Cm_tot > Mm){
                             Cm_tot = Mm;
                         }
-
                         sim->Cm_tot[it] = Cm_tot;
                         sim->Cw_tot[it] = Cw_tot;
                         
+                        // consumpton allocation
                         single::intraperiod_allocation(&sim->Cw_priv[it],&sim->Cw_pub[it],Cw_tot,woman,par);
                         single::intraperiod_allocation(&sim->Cm_priv[it],&sim->Cm_pub[it],Cm_tot,man,par);
 
                         // update end-of-period states  
                         sim->Aw[it] = Mw - sim->Cw_priv[it] - sim->Cw_pub[it];
                         sim->Am[it] = Mm - sim->Cm_priv[it] - sim->Cm_pub[it];
-
-                        // sim->power_idx[it] = -1;
                         sim->power[it] = -1.0;
 
                     }
 
-                    // utility of women
+                    // iii) utility of women
                     double love_now = 0.0;
                     if (sim->couple[it]){
                         love_now = sim->love[it];
