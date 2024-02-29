@@ -10,9 +10,10 @@ namespace sim {
     double update_power(int t, double power_lag, double love,double A_lag,double Aw_lag,double Am_lag,sim_struct* sim, sol_struct* sol, par_struct* par){
         
         // a. value of remaining a couple at current power
-        double power = -1.0; // initialize as divorce
+        double power = 1000.0; // nonsense value
         int idx_sol = index::couple(t,0,0,0,par); 
-        double Vw_couple_to_couple, Vm_couple_to_couple;
+        double Vw_couple_to_couple=0.0;
+        double Vm_couple_to_couple=0.0;
         tools::interp_3d_2out(par->grid_power,par->grid_love,par->grid_A, par->num_power,par->num_love,par->num_A, &sol->Vw_couple_to_couple[idx_sol],&sol->Vm_couple_to_couple[idx_sol], power_lag,love,A_lag, &Vw_couple_to_couple, &Vm_couple_to_couple);
 
         // b. value of transitioning into singlehood
@@ -31,13 +32,13 @@ namespace sim {
           
             // i. determine which partner is unsatisfied
             double* V_power_vec = new double[par->num_power];
-            double* V_couple_to_couple;
-            double* V_couple_to_couple_partner;
-            double V_couple_to_single;
-            double V_couple_to_single_partner;
-            double* grid_power;
+            double* V_couple_to_couple = nullptr;
+            double* V_couple_to_couple_partner = nullptr;
+            double V_couple_to_single = 0.0;
+            double V_couple_to_single_partner = 0.0;
+            double* grid_power = nullptr;
             bool flip = false;
-            if ((Vm_couple_to_couple>=Vm_couple_to_single)){ // woman wants to leave
+            if ((Vw_couple_to_couple<Vw_couple_to_single)){ // woman wants to leave
                 V_couple_to_single = Vw_couple_to_single;
                 V_couple_to_single_partner = Vm_couple_to_single;
 
@@ -62,7 +63,7 @@ namespace sim {
             int j_love = tools::binary_search(0,par->num_love,par->grid_love,love); 
             int j_A = tools::binary_search(0,par->num_A,par->grid_A,A_lag); 
             for (int iP=0; iP<par->num_power; iP++){ 
-                int idx;
+                int idx = 0;
                 if(flip){
                     idx = index::index4(t,par->num_power-1 - iP,0,0,par->T,par->num_power,par->num_love,par->num_A); // flipped for men
                 } else {
@@ -76,19 +77,19 @@ namespace sim {
             delete V_power_vec;
 
             if((power<0.0)|(power>1.0)){ // divorce
-                return -1.0;
+                power = -1.0;
             }
-
-            // iv. find marital surplus of partner at this new power allocation
-            int j_power = tools::binary_search(0,par->num_power,par->grid_power,power);
-            double V_power_partner = tools::_interp_3d(par->grid_power,par->grid_love,par->grid_A, par->num_power,par->num_love,par->num_A, &V_couple_to_couple_partner[idx_sol], power,love,A_lag,j_power,j_love,j_A);
-            double S_partner = couple::calc_marital_surplus(V_power_partner,V_couple_to_single_partner,par);
-            
-            // v. check if partner is happy. If not divorce
-            if(S_partner<0.0){
-                power = -1.0; 
-            }
-
+            else{
+                // iv. find marital surplus of partner at this new power allocation
+                int j_power = tools::binary_search(0,par->num_power,par->grid_power,power);
+                double V_power_partner = tools::_interp_3d(par->grid_power,par->grid_love,par->grid_A, par->num_power,par->num_love,par->num_A, &V_couple_to_couple_partner[idx_sol], power,love,A_lag,j_power,j_love,j_A);
+                double S_partner = couple::calc_marital_surplus(V_power_partner,V_couple_to_single_partner,par);
+                
+                // v. check if partner is happy. If not divorce
+                if(S_partner<0.0){
+                    power = -1.0; 
+                }
+            } 
         }
 
         return power;
@@ -168,12 +169,12 @@ namespace sim {
                     int it = index::index2(i,t,par->simN,par->simT);
 
                     // state variables
-                    double A_lag = 0;
-                    double Aw_lag = 0;
-                    double Am_lag = 0;
-                    bool   couple_lag = 0;
-                    double power_lag = 0;
-                    double love = 0;
+                    double A_lag = 0.0;
+                    double Aw_lag = 0.0;
+                    double Am_lag = 0.0;
+                    bool   couple_lag = false;
+                    double power_lag = 0.0;
+                    double love = 0.0;
                     if (t==0){
                         A_lag = sim->init_A[i];
                         Aw_lag = sim->init_Aw[i];
@@ -193,7 +194,7 @@ namespace sim {
                     } 
                     
                     // i) Find transitions in couple/single status and calculate power 
-                    double power = 1000; // nonsense value
+                    double power = 1000.0; // nonsense value
                     if (couple_lag) { // if start as couple
 
                         power = update_power(t,power_lag,love,A_lag,Aw_lag,Am_lag,sim,sol,par);
@@ -265,7 +266,7 @@ namespace sim {
                         int idx_sol_single = index::index2(t,0,par->T,par->num_A);
                         double *sol_single_w = &sol->Cw_tot_couple_to_single[idx_sol_single];
                         double *sol_single_m = &sol->Cm_tot_couple_to_single[idx_sol_single];
-                        if (power_lag<0){
+                        if (power_lag<0.0){
                             sol_single_w = &sol->Cw_tot_single_to_single[idx_sol_single];
                             sol_single_m = &sol->Cm_tot_single_to_single[idx_sol_single];
                         } 
