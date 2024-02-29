@@ -114,6 +114,8 @@ namespace couple {
             nlopt_destroy(opt);
 
             C_tot = x[0];
+
+            delete solver_data;
         }
 
         // implied consumption allocation (re-calculation)
@@ -494,12 +496,23 @@ namespace couple {
             } // love
             
             // delete pointers
+            // for (int i=0; i<num;i++){
+            //     delete[] list_start_as_couple[i];
+            //     delete[] list_couple_to_couple[i];
+            // }
+
             delete[] list_start_as_couple;
             delete[] list_couple_to_couple;
-            delete list_couple_to_single;
+            delete[] list_couple_to_single;
+            delete[] Sw;
+            delete[] Sm;
+            list_start_as_couple = nullptr;
+            list_couple_to_couple = nullptr;
+            list_couple_to_single = nullptr;
+            Sw = nullptr;
+            Sm = nullptr;
 
-            delete Sw;
-            delete Sm;
+            delete idx_couple;
 
         } // pragma
     }

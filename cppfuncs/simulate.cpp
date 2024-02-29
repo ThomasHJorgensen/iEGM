@@ -74,7 +74,8 @@ namespace sim {
             
             // iii. interpolate the power based on the value of single to find indifference-point. (flip the axis)
             power = tools::interp_1d(V_power_vec, par->num_power, grid_power, V_couple_to_single);
-            delete V_power_vec;
+            delete[] V_power_vec;
+            V_power_vec = nullptr;
 
             if((power<0.0)|(power>1.0)){ // divorce
                 power = -1.0;
@@ -120,7 +121,8 @@ namespace sim {
         double random = uniform_partner_A[index_sim];
         double A_sim = tools::interp_1d(cdf_Ap_cond,par->num_A,grid_A,random);
 
-        delete cdf_Ap_cond;
+        delete[] cdf_Ap_cond;
+        cdf_Ap_cond = nullptr;
 
         if (A_sim<0.0){ // WATCH OUT FOR EXTRAPOLATION OR FLAT CDF'S!!!
             A_sim = 0.0;
