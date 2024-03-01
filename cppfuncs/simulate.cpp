@@ -211,16 +211,15 @@ namespace sim {
                         bool meet = (sim->draw_meet[it] < par->prob_repartner[t]);
                         if (meet){ // if meet a potential partner
                             double Ap = draw_partner_assets(Aw_lag, woman, i,t, sim, par);
-                            int iL = sim->draw_repartner_iL[it]; // note: love draws on grid.
+                            love = sim->draw_repartner_love[it]; // note: love draws on grid.
 
-                            power = single::calc_initial_bargaining_weight(t, par->grid_love[iL], Aw_lag, Ap, sol, par);
+                            power = single::calc_initial_bargaining_weight(t, love, Aw_lag, Ap, sol, par);
 
                             if (0.0 <= power) { // if meet and agree to couple
                                 sim->couple[it] = true;
 
                                 // set beginning-of-period couple states
                                 A_lag = Aw_lag + Ap;
-                                love = par->grid_love[iL];
                                 sim->love[it] = love;
                             } else { // if meet but do not agree to couple
                                 power = -1.0;
