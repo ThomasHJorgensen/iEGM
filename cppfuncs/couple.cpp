@@ -150,7 +150,7 @@ namespace couple {
 
     void handle_liquidity_constraint_couple_to_couple(int t, int iP, int iL, double* m_vec, double* EmargU_pd, double* C_tot, double* Cw_priv,double* Cm_priv,double* C_pub,double* Vw,double* Vm, double* EVw_next, double* EVm_next, double* V, sol_struct* sol, par_struct* par){
         // 1. Check if liquidity constraint binds
-        // constraint: binding if common m is smaller than smallest m in endogenous grid (check if this holds when the endo grid bends back)
+        // constraint: binding if common m is smaller than smallest m in endogenous grid 
         for (int iA=0; iA < par->num_A; iA++){
             double M_now = resources(par->grid_A[iA],par);
 

@@ -115,8 +115,8 @@ class HouseholdModelClass(EconModelClass):
         shape_single = (par.T,par.num_A)                        # single states: T and assets
 
         # a.1. single to single
-        sol.Vw_single_to_single = np.nan + np.ones(shape_single)
-        sol.Vm_single_to_single = np.nan + np.ones(shape_single) 
+        sol.Vw_single_to_single = np.ones(shape_single) - np.inf  # Value
+        sol.Vm_single_to_single = np.ones(shape_single) - np.inf
 
         sol.Cw_priv_single_to_single = np.nan + np.ones(shape_single)     # private consumption, single
         sol.Cm_priv_single_to_single = np.nan + np.ones(shape_single)
@@ -129,10 +129,12 @@ class HouseholdModelClass(EconModelClass):
         sol.EmargUw_single_to_single_pd = np.zeros(shape_single)           # Expected marginal utility post-decision, woman single
         sol.C_totw_single_to_single_pd = np.zeros(par.num_A_pd)            # C for EGM, woman single 
         sol.Mw_single_to_single_pd = np.zeros(par.num_A_pd)                # Endogenous grid, woman single
+        sol.Vw_single_to_single_pd = np.zeros(par.num_A_pd)                # Value of being single, post-decision
 
         sol.EmargUm_single_to_single_pd = np.zeros(shape_single)          # Expected marginal utility post-decision, man single
         sol.C_totm_single_to_single_pd = np.zeros(par.num_A_pd)           # C for EGM, man single
         sol.Mm_single_to_single_pd = np.zeros(par.num_A_pd)               # Endogenous grid, man single
+        sol.Vm_single_to_single_pd = np.zeros(par.num_A_pd)               # Value of being single, post-decision
 
         ## a.2. couple to single
         sol.Vw_couple_to_single = np.nan + np.ones(shape_single)        # Value marriage -> single
